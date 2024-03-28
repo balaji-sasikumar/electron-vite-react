@@ -24,6 +24,7 @@
     "make-win": "electron-forge make --platform=win32"
   },
   "dependencies": {
+    "@electron-forge/plugin-fuses": "^7.3.1",
     "@ronomon/opened": "^1.5.2",
     "electron-squirrel-startup": "^1.0.0",
     "electron-updater": "^6.1.8"
