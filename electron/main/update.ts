@@ -8,7 +8,7 @@ import type {
 
 const { autoUpdater } = createRequire(import.meta.url)("electron-updater");
 import { dialog } from "electron";
-import { spawn } from "child_process";
+import { exec, spawn } from "child_process";
 const Opened = createRequire(import.meta.url)("@ronomon/opened");
 export function update(win: Electron.BrowserWindow) {
   // When set to false, the update download will be triggered through the API
@@ -61,11 +61,10 @@ export function update(win: Electron.BrowserWindow) {
         return "canceled";
       }
       let selectedPath = filePaths.filePaths[0];
-      let spawnRef;
       if (process.platform === "darwin") {
-        spawnRef = spawn("open", [selectedPath]);
+        spawn("open", [selectedPath]);
       } else {
-        spawnRef = spawn("start", [selectedPath]);
+        exec(`start ${selectedPath}`);
       }
       let paths = [selectedPath];
 

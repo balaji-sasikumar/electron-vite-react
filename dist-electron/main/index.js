@@ -1,192 +1,127 @@
-import { app, ipcMain, dialog, BrowserWindow, shell } from "electron";
-import { release } from "node:os";
-import { dirname, join } from "node:path";
-import { fileURLToPath } from "node:url";
-import { createRequire } from "node:module";
-import { spawn } from "child_process";
-const { autoUpdater } = createRequire(import.meta.url)("electron-updater");
-const Opened = createRequire(import.meta.url)("@ronomon/opened");
-function update(win2) {
-  autoUpdater.autoDownload = false;
-  autoUpdater.disableWebInstaller = false;
-  autoUpdater.allowDowngrade = false;
-  autoUpdater.on("checking-for-update", function() {
-  });
-  autoUpdater.on("update-available", (arg) => {
-    win2.webContents.send("update-can-available", {
-      update: true,
-      version: app.getVersion(),
-      newVersion: arg == null ? void 0 : arg.version
+import { app as t, ipcMain as l, dialog as _, BrowserWindow as p, shell as v } from "electron";
+import { release as E } from "node:os";
+import { dirname as I, join as r } from "node:path";
+import { fileURLToPath as T } from "node:url";
+import { createRequire as u } from "node:module";
+import { spawn as b, exec as g } from "child_process";
+const { autoUpdater: a } = u(import.meta.url)("electron-updater"), R = u(import.meta.url)("@ronomon/opened");
+function D(n) {
+  a.autoDownload = !1, a.disableWebInstaller = !1, a.allowDowngrade = !1, a.on("checking-for-update", function() {
+  }), a.on("update-available", (e) => {
+    n.webContents.send("update-can-available", {
+      update: !0,
+      version: t.getVersion(),
+      newVersion: e == null ? void 0 : e.version
     });
-  });
-  autoUpdater.on("update-not-available", (arg) => {
-    win2.webContents.send("update-can-available", {
-      update: false,
-      version: app.getVersion(),
-      newVersion: arg == null ? void 0 : arg.version
+  }), a.on("update-not-available", (e) => {
+    n.webContents.send("update-can-available", {
+      update: !1,
+      version: t.getVersion(),
+      newVersion: e == null ? void 0 : e.version
     });
-  });
-  ipcMain.handle("check-update", async () => {
-    if (!app.isPackaged) {
-      const error = new Error(
+  }), l.handle("check-update", async () => {
+    if (!t.isPackaged) {
+      const e = new Error(
         "The update feature is only available after the package."
       );
-      return { message: error.message, error };
+      return { message: e.message, error: e };
     }
     try {
-      return await autoUpdater.checkForUpdatesAndNotify();
-    } catch (error) {
-      return { message: "Network error", error };
+      return await a.checkForUpdatesAndNotify();
+    } catch (e) {
+      return { message: "Network error", error: e };
     }
-  });
-  ipcMain.handle(
+  }), l.handle(
     "open-dialog",
-    async (ipcEvent) => {
-      let filePaths = await dialog.showOpenDialog({
+    async (e) => {
+      let o = await _.showOpenDialog({
         properties: ["openDirectory", "openFile"]
       });
-      if (filePaths.canceled) {
+      if (o.canceled)
         return "canceled";
-      }
-      let selectedPath = filePaths.filePaths[0];
-      if (process.platform === "darwin") {
-        spawn("open", [selectedPath]);
-      } else {
-        spawn("start", [selectedPath]);
-      }
-      let paths = [selectedPath];
-      let intervalId;
-      intervalId = setInterval(async () => {
-        let isFileOpen = await isFileOpened(paths);
-        if (!isFileOpen) {
-          clearInterval(intervalId);
-          ipcEvent.sender.send(
-            "main-process-message",
-            `The file ${selectedPath} is closed.`
-          );
-        }
+      let i = o.filePaths[0];
+      process.platform === "darwin" ? b("open", [i]) : g(`start ${i}`);
+      let d = [i], f;
+      f = setInterval(async () => {
+        await L(d) || (clearInterval(f), e.sender.send(
+          "main-process-message",
+          `The file ${i} is closed.`
+        ));
       }, 5e3);
     }
-  );
-  ipcMain.handle("start-download", (event) => {
-    startDownload(
-      (error, progressInfo) => {
-        if (error) {
-          event.sender.send("update-error", { message: error.message, error });
-        } else {
-          event.sender.send("download-progress", progressInfo);
-        }
+  ), l.handle("start-download", (e) => {
+    V(
+      (o, i) => {
+        o ? e.sender.send("update-error", { message: o.message, error: o }) : e.sender.send("download-progress", i);
       },
       () => {
-        event.sender.send("update-downloaded");
+        e.sender.send("update-downloaded");
       }
     );
-  });
-  ipcMain.handle("quit-and-install", () => {
-    autoUpdater.quitAndInstall(false, true);
+  }), l.handle("quit-and-install", () => {
+    a.quitAndInstall(!1, !0);
   });
 }
-function startDownload(callback, complete) {
-  autoUpdater.on(
+function V(n, e) {
+  a.on(
     "download-progress",
-    (info) => callback(null, info)
-  );
-  autoUpdater.on("error", (error) => callback(error, null));
-  autoUpdater.on("update-downloaded", complete);
-  autoUpdater.downloadUpdate();
+    (o) => n(null, o)
+  ), a.on("error", (o) => n(o, null)), a.on("update-downloaded", e), a.downloadUpdate();
 }
-async function isFileOpened(paths) {
-  return new Promise((resolve, reject) => {
-    Opened.files(
-      paths,
-      function(error, hashTable) {
-        if (error) {
-          reject(error);
-        }
-        resolve(hashTable[paths[0]]);
+async function L(n) {
+  return new Promise((e, o) => {
+    R.files(
+      n,
+      function(i, d) {
+        i && o(i), e(d[n[0]]);
       }
     );
   });
 }
-globalThis.__filename = fileURLToPath(import.meta.url);
-globalThis.__dirname = dirname(__filename);
-process.env.DIST_ELECTRON = join(__dirname, "../");
-process.env.DIST = join(process.env.DIST_ELECTRON, "../dist");
-process.env.VITE_PUBLIC = process.env.VITE_DEV_SERVER_URL ? join(process.env.DIST_ELECTRON, "../public") : process.env.DIST;
-if (release().startsWith("6.1"))
-  app.disableHardwareAcceleration();
-if (process.platform === "win32")
-  app.setAppUserModelId(app.getName());
-if (!app.requestSingleInstanceLock()) {
-  app.quit();
-  process.exit(0);
-}
-let win = null;
-const preload = join(__dirname, "../preload/index.mjs");
-const url = process.env.VITE_DEV_SERVER_URL;
-const indexHtml = join(process.env.DIST, "index.html");
-async function createWindow() {
-  win = new BrowserWindow({
+globalThis.__filename = T(import.meta.url);
+globalThis.__dirname = I(__filename);
+process.env.DIST_ELECTRON = r(__dirname, "../");
+process.env.DIST = r(process.env.DIST_ELECTRON, "../dist");
+process.env.VITE_PUBLIC = process.env.VITE_DEV_SERVER_URL ? r(process.env.DIST_ELECTRON, "../public") : process.env.DIST;
+E().startsWith("6.1") && t.disableHardwareAcceleration();
+process.platform === "win32" && t.setAppUserModelId(t.getName());
+t.requestSingleInstanceLock() || (t.quit(), process.exit(0));
+let s = null;
+const w = r(__dirname, "../preload/index.mjs"), c = process.env.VITE_DEV_SERVER_URL, m = r(process.env.DIST, "index.html");
+async function h() {
+  s = new p({
     title: "Main window",
-    icon: join(process.env.VITE_PUBLIC, "favicon.ico"),
+    icon: r(process.env.VITE_PUBLIC, "favicon.ico"),
     webPreferences: {
-      preload
+      preload: w
       // Warning: Enable nodeIntegration and disable contextIsolation is not secure in production
       // nodeIntegration: true,
       // Consider using contextBridge.exposeInMainWorld
       // Read more on https://www.electronjs.org/docs/latest/tutorial/context-isolation
       // contextIsolation: false,
     }
-  });
-  if (url) {
-    win.loadURL(url);
-    win.webContents.openDevTools();
-  } else {
-    win.loadFile(indexHtml);
-  }
-  win.webContents.on("did-finish-load", () => {
-    win == null ? void 0 : win.webContents.send("main-process-message", (/* @__PURE__ */ new Date()).toLocaleString());
-  });
-  win.webContents.setWindowOpenHandler(({ url: url2 }) => {
-    if (url2.startsWith("https:"))
-      shell.openExternal(url2);
-    return { action: "deny" };
-  });
-  update(win);
+  }), c ? (s.loadURL(c), s.webContents.openDevTools()) : s.loadFile(m), s.webContents.on("did-finish-load", () => {
+    s == null || s.webContents.send("main-process-message", (/* @__PURE__ */ new Date()).toLocaleString());
+  }), s.webContents.setWindowOpenHandler(({ url: n }) => (n.startsWith("https:") && v.openExternal(n), { action: "deny" })), D(s);
 }
-app.whenReady().then(createWindow);
-app.on("window-all-closed", () => {
-  win = null;
-  if (process.platform !== "darwin")
-    app.quit();
+t.whenReady().then(h);
+t.on("window-all-closed", () => {
+  s = null, process.platform !== "darwin" && t.quit();
 });
-app.on("second-instance", () => {
-  if (win) {
-    if (win.isMinimized())
-      win.restore();
-    win.focus();
-  }
+t.on("second-instance", () => {
+  s && (s.isMinimized() && s.restore(), s.focus());
 });
-app.on("activate", () => {
-  const allWindows = BrowserWindow.getAllWindows();
-  if (allWindows.length) {
-    allWindows[0].focus();
-  } else {
-    createWindow();
-  }
+t.on("activate", () => {
+  const n = p.getAllWindows();
+  n.length ? n[0].focus() : h();
 });
-ipcMain.handle("open-win", (_, arg) => {
-  const childWindow = new BrowserWindow({
+l.handle("open-win", (n, e) => {
+  const o = new p({
     webPreferences: {
-      preload,
-      nodeIntegration: true,
-      contextIsolation: false
+      preload: w,
+      nodeIntegration: !0,
+      contextIsolation: !1
     }
   });
-  if (process.env.VITE_DEV_SERVER_URL) {
-    childWindow.loadURL(`${url}#${arg}`);
-  } else {
-    childWindow.loadFile(indexHtml, { hash: arg });
-  }
+  process.env.VITE_DEV_SERVER_URL ? o.loadURL(`${c}#${e}`) : o.loadFile(m, { hash: e });
 });
-//# sourceMappingURL=index.js.map
