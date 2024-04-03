@@ -18,10 +18,14 @@ function App() {
   const open = async () => {
     await window.ipcRenderer.invoke("open-dialog");
   };
+  const convertFile = async () => {
+    await window.ipcRenderer.invoke("convert-file");
+  };
 
   return (
     <div className="App">
       <button onClick={open}>Open Explorer</button>
+      <button onClick={convertFile}>Convert File</button>
       <h1>{message}</h1>
     </div>
   );
