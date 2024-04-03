@@ -25,7 +25,9 @@
   },
   "dependencies": {
     "@ronomon/opened": "^1.5.2",
-    "electron-updater": "^6.1.8"
+    "crypto-ts": "^1.0.2",
+    "electron-updater": "^6.1.8",
+    "mime": "^4.0.1"
   },
   "devDependencies": {
     "@playwright/test": "^1.42.1",

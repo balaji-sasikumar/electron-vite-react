@@ -1,56 +1,13 @@
-import { app, ipcMain } from "electron";
+import { app, ipcMain, shell } from "electron";
 import { createRequire } from "node:module";
-import type {
-  ProgressInfo,
-  UpdateDownloadedEvent,
-  UpdateInfo,
-} from "electron-updater";
-
-const { autoUpdater } = createRequire(import.meta.url)("electron-updater");
 import { dialog } from "electron";
-import { exec, spawn } from "child_process";
 const Opened = createRequire(import.meta.url)("@ronomon/opened");
+import * as fs from "fs";
+import { exec } from "child_process";
+import mime from "mime";
+import { AES, enc } from "crypto-ts";
+const key = "Balaji123456";
 export function update(win: Electron.BrowserWindow) {
-  // When set to false, the update download will be triggered through the API
-  autoUpdater.autoDownload = false;
-  autoUpdater.disableWebInstaller = false;
-  autoUpdater.allowDowngrade = false;
-
-  // start check
-  autoUpdater.on("checking-for-update", function () {});
-  // update available
-  autoUpdater.on("update-available", (arg: UpdateInfo) => {
-    win.webContents.send("update-can-available", {
-      update: true,
-      version: app.getVersion(),
-      newVersion: arg?.version,
-    });
-  });
-  // update not available
-  autoUpdater.on("update-not-available", (arg: UpdateInfo) => {
-    win.webContents.send("update-can-available", {
-      update: false,
-      version: app.getVersion(),
-      newVersion: arg?.version,
-    });
-  });
-
-  // Checking for updates
-  ipcMain.handle("check-update", async () => {
-    if (!app.isPackaged) {
-      const error = new Error(
-        "The update feature is only available after the package."
-      );
-      return { message: error.message, error };
-    }
-
-    try {
-      return await autoUpdater.checkForUpdatesAndNotify();
-    } catch (error) {
-      return { message: "Network error", error };
-    }
-  });
-
   ipcMain.handle(
     "open-dialog",
     async (ipcEvent: Electron.IpcMainInvokeEvent) => {
@@ -61,74 +18,100 @@ export function update(win: Electron.BrowserWindow) {
         return "canceled";
       }
       let selectedPath = filePaths.filePaths[0];
-      if (process.platform === "darwin") {
-        spawn("open", [selectedPath]);
-      } else {
-        exec(`start ${selectedPath}`);
-      }
-      let paths = [selectedPath];
+      console.log("Selected path:", selectedPath);
+      let tempPath = app.getPath("temp");
+      // let tempPath = selectedPath
+      //   .replace("Downloads", "Downloads/tmp")
+      //   .split("/")
+      //   .slice(0, -1)
+      //   .join("/");
+      let fileName = selectedPath.split("/").pop()?.split(".txt")[0];
+      let newPath = tempPath + fileName;
+      fs.readFile(selectedPath, (err, data) => {
+        if (err) {
+          console.error("Error reading file:", err);
+          return;
+        }
+        let decrypted = AES.decrypt(data.toString(), key).toString(enc.Utf8);
+
+        const base64Data = decrypted.split(",")[1];
+        fs.writeFile(newPath, base64Data, { encoding: "base64" }, (err) => {
+          if (err) {
+            console.error("Error writing file:", err);
+            return;
+          }
+          shell
+            .openPath(newPath)
+            .then(() => {
+              console.log("File opened successfully");
+            })
+            .catch((err) => {
+              console.error("Error opening file:", err);
+            });
+        });
+        // fs.mkdir(tempPath, { recursive: true }, (err) => {
+        //   if (err) {
+        //     console.error("Error creating directory:", err);
+        //     return;
+        //   }
+
+        // });
+      });
+      let paths = [newPath];
 
       let intervalId: NodeJS.Timeout;
       intervalId = setInterval(async () => {
         let isFileOpen = await isFileOpened(paths);
         if (!isFileOpen) {
-          clearInterval(intervalId!);
-          ipcEvent.sender.send(
-            "main-process-message",
-            `The file ${selectedPath} is closed.`
-          );
+          fs.readFile(newPath, (err, data) => {
+            if (err) {
+              console.error("Error reading file:", err);
+              return;
+            }
+            const base64Data = Buffer.from(data).toString("base64");
+            const dataURL = `data:${mime.getType(
+              selectedPath
+            )};base64,${base64Data}`;
+            const encrypted = AES.encrypt(dataURL, key).toString();
+            fs.writeFile(selectedPath, encrypted, (err) => {
+              if (err) {
+                console.error("Error writing file:", err);
+                return;
+              }
+            });
+            clearInterval(intervalId!);
+            ipcEvent.sender.send(
+              "main-process-message",
+              `The file ${selectedPath} is closed on ${new Date()}`
+            );
+          });
         }
       }, 5000);
     }
   );
-
-  // Start downloading and feedback on progress
-  ipcMain.handle("start-download", (event: Electron.IpcMainInvokeEvent) => {
-    startDownload(
-      (error, progressInfo) => {
-        if (error) {
-          // feedback download error message
-          event.sender.send("update-error", { message: error.message, error });
-        } else {
-          // feedback update progress message
-          event.sender.send("download-progress", progressInfo);
-        }
-      },
-      () => {
-        // feedback update downloaded message
-        event.sender.send("update-downloaded");
-      }
-    );
-  });
-
-  // Install now
-  ipcMain.handle("quit-and-install", () => {
-    autoUpdater.quitAndInstall(false, true);
-  });
-}
-
-function startDownload(
-  callback: (error: Error | null, info: ProgressInfo | null) => void,
-  complete: (event: UpdateDownloadedEvent) => void
-) {
-  autoUpdater.on("download-progress", (info: ProgressInfo) =>
-    callback(null, info)
-  );
-  autoUpdater.on("error", (error: Error) => callback(error, null));
-  autoUpdater.on("update-downloaded", complete);
-  autoUpdater.downloadUpdate();
 }
 
 async function isFileOpened(paths: string[]): Promise<boolean> {
   return new Promise((resolve, reject) => {
-    Opened.files(
-      paths,
-      function (error: any, hashTable: { [x: string]: boolean }) {
-        if (error) {
-          reject(error);
+    if (process.platform === "win32") {
+      Opened.files(
+        paths,
+        function (error: any, hashTable: { [x: string]: boolean }) {
+          if (error) {
+            reject(error);
+          }
+          console.log(hashTable);
+          resolve(hashTable[paths[0]]);
         }
-        resolve(hashTable[paths[0]]);
-      }
-    );
+      );
+    } else {
+      exec(`lsof -F n -- "${paths[0]}"`, (error, stdout, stderr) => {
+        if (error || stderr) {
+          resolve(false);
+        }
+        console.log(stdout);
+        resolve(stdout.length > 0);
+      });
+    }
   });
 }

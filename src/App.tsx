@@ -1,11 +1,7 @@
 import { useEffect, useState } from "react";
-import UpdateElectron from "@/components/update";
-import logoVite from "./assets/logo-vite.svg";
-import logoElectron from "./assets/logo-electron.svg";
 import "./App.css";
 
 function App() {
-  const [count, setCount] = useState(0);
   const [message, setMessage] = useState("");
 
   useEffect(() => {
@@ -20,15 +16,13 @@ function App() {
   }, []);
 
   const open = async () => {
-    let res = await window.ipcRenderer.invoke("open-dialog");
-    console.log(res);
+    await window.ipcRenderer.invoke("open-dialog");
   };
 
   return (
     <div className="App">
-      <button onClick={open}>open electron</button>
+      <button onClick={open}>Open Explorer</button>
       <h1>{message}</h1>
-      {/* <UpdateElectron /> */}
     </div>
   );
 }
