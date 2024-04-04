@@ -1,10 +1,9 @@
 {
-  "name": "electron-vite-react",
+  "name": "file-encryptor",
   "version": "2.2.0",
   "main": "dist-electron/main/index.js",
-  "description": "Electron Vite React boilerplate.",
+  "description": "A simple file encryptor and decryptor using AES-256-CBC encryption algorithm.",
   "author": "balaji",
-  "license": "MIT",
   "private": true,
   "debug": {
     "env": {
@@ -17,11 +16,7 @@
     "build": "tsc && vite build && electron-builder -w",
     "preview": "vite preview",
     "pree2e": "vite build --mode=test",
-    "e2e": "playwright test",
-    "start": "electron-forge start",
-    "package": "electron-forge package",
-    "make": "electron-forge make",
-    "make-win": "electron-forge make --platform=win32"
+    "e2e": "playwright test"
   },
   "dependencies": {
     "@ronomon/opened": "^1.5.2",

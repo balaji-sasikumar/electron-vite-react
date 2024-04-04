@@ -1,17 +1,31 @@
 import { useEffect, useState } from "react";
 import "./App.css";
+import Modal from "./components/update/Modal";
 
 function App() {
   const [message, setMessage] = useState("");
-
+  const [date, setDate] = useState("");
+  const [modalOpen, setModalOpen] = useState<boolean>(false);
+  const [modalBtn, setModalBtn] = useState<{
+    cancelText?: string;
+    okText?: string;
+    onCancel?: () => void;
+    onOk?: () => void;
+  }>({
+    onCancel: () => setModalOpen(false),
+    onOk: () => window.ipcRenderer.invoke("start-download"),
+  });
   useEffect(() => {
-    window.ipcRenderer.on("main-process-message", (event, message) => {
+    window.ipcRenderer.on("file-processing", (event, message, date) => {
       console.log("Received message from main process: ", message);
+      console.log("Received message from main process: ", date);
       setMessage(message);
+      setDate(date);
+      setModalOpen(true);
     });
 
     return () => {
-      window.ipcRenderer.off("main-process-message", () => {});
+      window.ipcRenderer.off("file-processing", () => {});
     };
   }, []);
 
@@ -24,9 +38,24 @@ function App() {
 
   return (
     <div className="App">
+      <Modal
+        open={modalOpen}
+        cancelText={modalBtn?.cancelText}
+        okText={modalBtn?.okText}
+        onCancel={modalBtn?.onCancel}
+        onOk={modalBtn?.onOk}
+      >
+        {message && (
+          <div className="container">
+            <div className="info-box">
+              <h4>{message}</h4>
+              <h5 style={{ textAlign: "right" }}>{date}</h5>
+            </div>
+          </div>
+        )}
+      </Modal>
       <button onClick={open}>Open Explorer</button>
       <button onClick={convertFile}>Convert File</button>
-      <h1>{message}</h1>
     </div>
   );
 }

@@ -27,8 +27,9 @@ export function update(win: Electron.BrowserWindow) {
       let selectedPath = filePaths.filePaths[0];
       encryptAndSaveFile(selectedPath, selectedPath + ".txt");
       ipcEvent.sender.send(
-        "main-process-message",
-        `The file ${selectedPath} is converted on ${new Date()}`
+        "file-processing",
+        `The file ${selectedPath} is converted successfully`,
+        `${new Date().toLocaleString()}`
       );
     }
   );
@@ -44,8 +45,18 @@ export function update(win: Electron.BrowserWindow) {
       }
       let selectedPath = filePaths.filePaths[0];
       let tempPath = app.getPath("temp");
+
+      if (!selectedPath.endsWith(".txt")) {
+        ipcEvent.sender.send(
+          "file-processing",
+          `The file ${selectedPath} is not supported`,
+          `${new Date().toLocaleString()}`
+        );
+        return;
+      }
       let fileName = path.basename(selectedPath).split(".txt")[0];
       let newPath = tempPath + fileName;
+
       fs.readFile(selectedPath, (err, data) => {
         if (err) {
           console.error("Error reading file:", err);
@@ -55,8 +66,9 @@ export function update(win: Electron.BrowserWindow) {
 
         if (decrypted === DATA_FORMAT_NOT_SUPPORTED) {
           ipcEvent.sender.send(
-            "main-process-message",
-            `The file ${selectedPath} is not supported`
+            "file-processing",
+            `The file ${selectedPath} is not supported`,
+            `${new Date().toLocaleString()}`
           );
           return;
         }
@@ -93,8 +105,9 @@ export function update(win: Electron.BrowserWindow) {
           encryptAndSaveFile(newPath, selectedPath);
           clearInterval(intervalId!);
           ipcEvent.sender.send(
-            "main-process-message",
-            `The file ${selectedPath} is closed on ${new Date()}`
+            "file-processing",
+            `The file ${selectedPath} is processed successfully`,
+            `${new Date().toLocaleString()}`
           );
         }
       }, 5000);
