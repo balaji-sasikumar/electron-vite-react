@@ -25,7 +25,7 @@ export function update(win: Electron.BrowserWindow) {
         return "canceled";
       }
       let selectedPath = filePaths.filePaths[0];
-      encryptAndSaveFile(selectedPath, selectedPath + "txt");
+      encryptAndSaveFile(selectedPath, selectedPath + ".txt");
       ipcEvent.sender.send(
         "main-process-message",
         `The file ${selectedPath} is converted on ${new Date()}`
