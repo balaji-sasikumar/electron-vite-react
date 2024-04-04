@@ -7,7 +7,13 @@ import { exec } from "child_process";
 import mime from "mime";
 import { AES, enc } from "crypto-ts";
 import * as path from "path";
+
 const key = "Balaji123456";
+const chunkSize = 10 * 1024 * 1024;
+const chunkSeparator = "###"; // Unique separator
+const bytesInMb = 1048576;
+const DATA_FORMAT_NOT_SUPPORTED = "Data format not supported";
+
 export function update(win: Electron.BrowserWindow) {
   ipcMain.handle(
     "convert-file",
@@ -19,19 +25,11 @@ export function update(win: Electron.BrowserWindow) {
         return "canceled";
       }
       let selectedPath = filePaths.filePaths[0];
-      const base64Data = await convertFileToBase64(selectedPath);
-      const dataURL = `data:${mime.getType(selectedPath)};base64,${base64Data}`;
-      const encrypted = AES.encrypt(dataURL, key).toString();
-      fs.writeFile(selectedPath + ".txt", encrypted, (err) => {
-        if (err) {
-          console.error("Error writing file:", err);
-          return;
-        }
-        ipcEvent.sender.send(
-          "main-process-message",
-          `The file ${selectedPath} is converted on ${new Date()}`
-        );
-      });
+      encryptAndSaveFile(selectedPath, selectedPath + "txt");
+      ipcEvent.sender.send(
+        "main-process-message",
+        `The file ${selectedPath} is converted on ${new Date()}`
+      );
     }
   );
 
@@ -53,7 +51,15 @@ export function update(win: Electron.BrowserWindow) {
           console.error("Error reading file:", err);
           return;
         }
-        let decrypted = AES.decrypt(data.toString(), key).toString(enc.Utf8);
+        let decrypted = decryptFile(data.toString());
+
+        if (decrypted === DATA_FORMAT_NOT_SUPPORTED) {
+          ipcEvent.sender.send(
+            "main-process-message",
+            `The file ${selectedPath} is not supported`
+          );
+          return;
+        }
 
         const base64Data = decrypted.split(",")[1];
 
@@ -84,17 +90,7 @@ export function update(win: Electron.BrowserWindow) {
       intervalId = setInterval(async () => {
         let isFileOpen = await isFileOpened(paths);
         if (!isFileOpen) {
-          const base64Data = await convertFileToBase64(newPath);
-          const dataURL = `data:${mime.getType(
-            selectedPath
-          )};base64,${base64Data}`;
-          const encrypted = AES.encrypt(dataURL, key).toString();
-          fs.writeFile(selectedPath, encrypted, (err) => {
-            if (err) {
-              console.error("Error writing file:", err);
-              return;
-            }
-          });
+          encryptAndSaveFile(newPath, selectedPath);
           clearInterval(intervalId!);
           ipcEvent.sender.send(
             "main-process-message",
@@ -115,7 +111,6 @@ async function isFileOpened(paths: string[]): Promise<boolean> {
           if (error) {
             reject(error);
           }
-          console.log(hashTable);
           resolve(hashTable[paths[0]]);
         }
       );
@@ -124,7 +119,6 @@ async function isFileOpened(paths: string[]): Promise<boolean> {
         if (error || stderr) {
           resolve(false);
         }
-        console.log(stdout);
         resolve(stdout.length > 0);
       });
     }
@@ -140,4 +134,72 @@ async function convertFileToBase64(filePath: string): Promise<string> {
       resolve(Buffer.from(data).toString("base64"));
     })
   );
+}
+
+function encryptFile(fileDataUrl: string) {
+  const encryptedChunks = [];
+  const totalChunks = Math.ceil(fileDataUrl.length / chunkSize);
+
+  for (let chunkIndex = 0; chunkIndex < totalChunks; chunkIndex++) {
+    const start = chunkIndex * chunkSize;
+    const end = start + chunkSize;
+    const chunk = fileDataUrl.substring(start, end);
+
+    const encChunk = encryptionAES(chunk, key);
+    encryptedChunks.push(encChunk);
+  }
+
+  const joinedEncryptedData = encryptedChunks.join(chunkSeparator);
+  return joinedEncryptedData;
+}
+function encryptionAES(msg: string, key: string) {
+  if (msg && key) {
+    return AES.encrypt(msg, key).toString();
+  } else {
+    return msg;
+  }
+}
+
+function decryptionAES(msg: string, key: string) {
+  try {
+    if (msg && key) {
+      const bytes = AES.decrypt(msg, key);
+      const plaintext = bytes.toString(enc.Utf8);
+      return plaintext || DATA_FORMAT_NOT_SUPPORTED;
+    } else if (!msg && key) {
+      return msg;
+    } else {
+      return DATA_FORMAT_NOT_SUPPORTED;
+    }
+  } catch (exception: any) {
+    return exception.message === "Malformed UTF-8 data"
+      ? DATA_FORMAT_NOT_SUPPORTED
+      : "";
+  }
+}
+
+function decryptFile(encryptedData: string) {
+  const encryptedChunks = encryptedData.split(chunkSeparator);
+  const decryptedChunks = [];
+
+  for (const encChunk of encryptedChunks) {
+    const decChunk = decryptionAES(encChunk, key);
+    if (decChunk === DATA_FORMAT_NOT_SUPPORTED) {
+      return DATA_FORMAT_NOT_SUPPORTED;
+    }
+    decryptedChunks.push(decChunk);
+  }
+  const decryptedContent = decryptedChunks.join("");
+  return decryptedContent;
+}
+async function encryptAndSaveFile(fromPath: string, toPath: string) {
+  const base64Data = await convertFileToBase64(fromPath);
+  const dataURL = `data:${mime.getType(toPath)};base64,${base64Data}`;
+  const encrypted = encryptFile(dataURL);
+  fs.writeFile(toPath, encrypted, (err) => {
+    if (err) {
+      console.error("Error writing file:", err);
+      return;
+    }
+  });
 }
