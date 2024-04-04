@@ -32,4 +32,3 @@ yarn.lock
 /playwright-report/
 /playwright/.cache/
 out/
-dist-electron
