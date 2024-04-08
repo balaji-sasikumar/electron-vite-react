@@ -19,6 +19,7 @@
     "e2e": "playwright test"
   },
   "dependencies": {
+    "@azure/storage-file-share": "^12.17.0",
     "@ronomon/opened": "^1.5.2",
     "crypto-ts": "^1.0.2",
     "electron-updater": "^6.1.8",

@@ -1,10 +1,12 @@
 import { useEffect, useState } from "react";
 import "./App.css";
 import Modal from "./components/update/Modal";
-
+import SettingsComponent from "./components/update/Settings/settings";
 function App() {
   const [message, setMessage] = useState("");
   const [date, setDate] = useState("");
+  const [files, setFiles] = useState<File[]>([]);
+
   const [modalOpen, setModalOpen] = useState<boolean>(false);
   const [modalBtn, setModalBtn] = useState<{
     cancelText?: string;
@@ -15,17 +17,29 @@ function App() {
     onCancel: () => setModalOpen(false),
     onOk: () => window.ipcRenderer.invoke("start-download"),
   });
+
   useEffect(() => {
-    window.ipcRenderer.on("file-processing", (event, message, date) => {
-      console.log("Received message from main process: ", message);
-      console.log("Received message from main process: ", date);
-      setMessage(message);
-      setDate(date);
-      setModalOpen(true);
-    });
+    (async () => {
+      const configuration = localStorage.getItem("configuration");
+      await window.ipcRenderer.invoke("get-file", configuration);
+
+      window.ipcRenderer.on("file-processing", (event, message, date) => {
+        console.log("file processing message", message, date);
+        setMessage(message);
+        setDate(date);
+        setModalOpen(true);
+      });
+
+      window.ipcRenderer.on("get-fileshare-data", (event, file) => {
+        console.log("Received message from main process: ", file);
+        setFiles(file);
+        console.log(files);
+      });
+    })();
 
     return () => {
       window.ipcRenderer.off("file-processing", () => {});
+      window.ipcRenderer.off("get-fileshare-data", () => {});
     };
   }, []);
 
@@ -36,28 +50,78 @@ function App() {
     await window.ipcRenderer.invoke("convert-file");
   };
 
+  const getShareFiles = async () => {
+    await window.ipcRenderer.invoke("get-file");
+  };
+
+  const openFile = async (file: any) => {
+    const configuration = localStorage.getItem("configuration");
+
+    await window.ipcRenderer.invoke("open-file", file, configuration);
+  };
+
+  // return (
+  //   <div className="App">
+  //     <Modal
+  //       open={modalOpen}
+  //       cancelText={modalBtn?.cancelText}
+  //       okText={modalBtn?.okText}
+  //       onCancel={modalBtn?.onCancel}
+  //       onOk={modalBtn?.onOk}
+  //     >
+  //       {message && (
+  //         <div className="container">
+  //           <div className="info-box">
+  //             <h4>{message}</h4>
+  //             <h5 style={{ textAlign: "right" }}>{date}</h5>
+  //           </div>
+  //         </div>
+  //       )}
+  //     </Modal>
+  //     <button onClick={open}>Open Explorer</button>
+  //     <button onClick={convertFile}>Convert File</button>
+  //     <button onClick={getShareFiles}>get File</button>
+  //   </div>
+  // );
+
   return (
-    <div className="App">
-      <Modal
-        open={modalOpen}
-        cancelText={modalBtn?.cancelText}
-        okText={modalBtn?.okText}
-        onCancel={modalBtn?.onCancel}
-        onOk={modalBtn?.onOk}
-      >
-        {message && (
-          <div className="container">
-            <div className="info-box">
-              <h4>{message}</h4>
-              <h5 style={{ textAlign: "right" }}>{date}</h5>
-            </div>
-          </div>
-        )}
-      </Modal>
-      <button onClick={open}>Open Explorer</button>
-      <button onClick={convertFile}>Convert File</button>
+    <div>
+      <h1>Files</h1>
+      <ul>
+        {files.map((file) => (
+          <li
+            key={file.name}
+            onClick={() => {
+              openFile(file);
+            }}
+          >
+            {file.name}
+          </li>
+        ))}
+      </ul>
     </div>
+    // <SettingsComponent />
   );
 }
+
+// function showFiles(files: any[]) {
+//   return (
+//     <div>
+//       <h1>Files</h1>
+//       <ul>
+//         {files.map((file) => (
+//           <li
+//             key={file.name}
+//             onClick={() => {
+//               openFile(file);
+//             }}
+//           >
+//             {file.name}
+//           </li>
+//         ))}
+//       </ul>
+//     </div>
+//   );
+// }
 
 export default App;

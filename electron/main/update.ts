@@ -7,12 +7,13 @@ import { exec } from "child_process";
 import mime from "mime";
 import { AES, enc } from "crypto-ts";
 import * as path from "path";
+import {
+  ShareServiceClient,
+  StorageSharedKeyCredential,
+} from "@azure/storage-file-share";
 
+import { chunkSeparator, DATA_FORMAT_NOT_SUPPORTED, chunkSize } from "./utils";
 const key = "Balaji123456";
-const chunkSize = 10 * 1024 * 1024;
-const chunkSeparator = "###"; // Unique separator
-const bytesInMb = 1048576;
-const DATA_FORMAT_NOT_SUPPORTED = "Data format not supported";
 
 export function update(win: Electron.BrowserWindow) {
   ipcMain.handle(
@@ -44,7 +45,6 @@ export function update(win: Electron.BrowserWindow) {
         return "canceled";
       }
       let selectedPath = filePaths.filePaths[0];
-      let tempPath = app.getPath("temp");
 
       if (!selectedPath.endsWith(".txt")) {
         ipcEvent.sender.send(
@@ -54,6 +54,7 @@ export function update(win: Electron.BrowserWindow) {
         );
         return;
       }
+      let tempPath = app.getPath("temp");
       let fileName = path.basename(selectedPath).split(".txt")[0];
       let newPath = tempPath + fileName;
 
@@ -75,26 +76,7 @@ export function update(win: Electron.BrowserWindow) {
 
         const base64Data = decrypted.split(",")[1];
 
-        fs.mkdir(tempPath, { recursive: true }, (err) => {
-          if (err) {
-            console.error("Error creating directory:", err);
-            return;
-          }
-          fs.writeFile(newPath, base64Data, { encoding: "base64" }, (err) => {
-            if (err) {
-              console.error("Error writing file:", err);
-              return;
-            }
-            shell
-              .openPath(newPath)
-              .then(() => {
-                console.log("File opened successfully");
-              })
-              .catch((err) => {
-                console.error("Error opening file:", err);
-              });
-          });
-        });
+        openFile(tempPath, newPath, base64Data);
       });
       let paths = [newPath];
 
@@ -102,11 +84,70 @@ export function update(win: Electron.BrowserWindow) {
       intervalId = setInterval(async () => {
         let isFileOpen = await isFileOpened(paths);
         if (!isFileOpen) {
-          encryptAndSaveFile(newPath, selectedPath);
+          await encryptAndSaveFile(newPath, selectedPath);
           clearInterval(intervalId!);
+          removeFileFromTempPath(newPath);
           ipcEvent.sender.send(
             "file-processing",
             `The file ${selectedPath} is processed successfully`,
+            `${new Date().toLocaleString()}`
+          );
+        }
+      }, 5000);
+    }
+  );
+  ipcMain.handle(
+    "get-file",
+    async (ipcEvent: Electron.IpcMainInvokeEvent, configuration) => {
+      configuration = JSON.parse(configuration);
+      const res = await listShares(configuration, "");
+      ipcEvent.sender.send("get-fileshare-data", res);
+      return res;
+    }
+  );
+  ipcMain.handle(
+    "open-file",
+    async (ipcEvent: Electron.IpcMainInvokeEvent, file, configuration) => {
+      configuration = JSON.parse(configuration);
+      if (!file.name.endsWith(".txt")) {
+        ipcEvent.sender.send(
+          "file-processing",
+          `The file ${file.name} is not supported`,
+          `${new Date().toLocaleString()}`
+        );
+        return;
+      }
+      let fileData = await downloadFile(file, configuration, "");
+      let tempPath = app.getPath("temp");
+      let fileName = file.name.split(".txt")[0];
+      let newPath = tempPath + fileName;
+
+      let decrypted = decryptFile(fileData.toString());
+
+      if (decrypted === DATA_FORMAT_NOT_SUPPORTED) {
+        ipcEvent.sender.send(
+          "file-processing",
+          `The file ${fileName} is not supported`,
+          `${new Date().toLocaleString()}`
+        );
+        return;
+      }
+      const base64Data = decrypted.split(",")[1];
+
+      openFile(tempPath, newPath, base64Data);
+      let paths = [newPath];
+      let intervalId: NodeJS.Timeout;
+      intervalId = setInterval(async () => {
+        let isFileOpen = await isFileOpened(paths);
+        if (!isFileOpen) {
+          await encryptAndSaveFile(newPath, newPath + ".txt");
+          await uploadFile(file.name, newPath + ".txt", configuration, "");
+          removeFileFromTempPath(newPath);
+          removeFileFromTempPath(newPath + ".txt");
+          clearInterval(intervalId!);
+          ipcEvent.sender.send(
+            "file-processing",
+            `The file ${fileName} is processed successfully`,
             `${new Date().toLocaleString()}`
           );
         }
@@ -206,13 +247,130 @@ function decryptFile(encryptedData: string) {
   return decryptedContent;
 }
 async function encryptAndSaveFile(fromPath: string, toPath: string) {
-  const base64Data = await convertFileToBase64(fromPath);
-  const dataURL = `data:${mime.getType(toPath)};base64,${base64Data}`;
-  const encrypted = encryptFile(dataURL);
-  fs.writeFile(toPath, encrypted, (err) => {
-    if (err) {
-      console.error("Error writing file:", err);
-      return;
-    }
+  return new Promise<void>(async (resolve, reject) => {
+    const base64Data = await convertFileToBase64(fromPath);
+    const dataURL = `data:${mime.getType(toPath)};base64,${base64Data}`;
+    const encrypted = encryptFile(dataURL);
+    fs.writeFile(toPath, encrypted, (err) => {
+      if (err) {
+        console.error("Error writing file:", err);
+        reject(err);
+        return;
+      }
+      resolve();
+    });
   });
 }
+function openFile(tempPath: string, newPath: string, base64Data: string) {
+  fs.mkdir(tempPath, { recursive: true }, (err) => {
+    if (err) {
+      console.error("Error creating directory:", err);
+      return;
+    }
+    fs.writeFile(newPath, base64Data, { encoding: "base64" }, (err) => {
+      if (err) {
+        console.error("Error writing file:", err);
+        return;
+      }
+      shell
+        .openPath(newPath)
+        .then(() => {
+          console.log("File opened successfully");
+        })
+        .catch((err) => {
+          console.error("Error opening file:", err);
+        });
+    });
+  });
+}
+
+const listShares = async (
+  configuration: { accountName: string; accountKey: string; shareName: string },
+  directoryName: string
+) => {
+  const { accountName: account, accountKey, shareName } = configuration;
+  const credential = new StorageSharedKeyCredential(account, accountKey);
+  const serviceClient = new ShareServiceClient(
+    `https://${account}.file.core.windows.net`,
+    credential
+  );
+  const shareClient = serviceClient
+    .getShareClient(shareName)
+    .getDirectoryClient(directoryName);
+  let iter = shareClient.listFilesAndDirectories();
+  const fileList = [];
+  for await (const item of iter) {
+    fileList.push(item);
+  }
+  return fileList;
+};
+
+const downloadFile = async (
+  file: any,
+  configuration: { accountName: string; accountKey: string; shareName: string },
+  directoryName: string
+) => {
+  const { accountName: account, accountKey, shareName } = configuration;
+  const credential = new StorageSharedKeyCredential(account, accountKey);
+  const serviceClient = new ShareServiceClient(
+    `https://${account}.file.core.windows.net`,
+    credential
+  );
+  const shareClient = serviceClient.getShareClient(shareName);
+  const directoryClient = shareClient.getDirectoryClient(directoryName);
+  const fileClient = directoryClient.getFileClient(file.name);
+  const downloadResponse = await fileClient.download();
+  const downloadedContent = await streamToBuffer(
+    downloadResponse.readableStreamBody
+  );
+  return (downloadedContent as Buffer).toString();
+};
+
+async function streamToBuffer(
+  readableStream: NodeJS.ReadableStream | undefined
+) {
+  return new Promise((resolve, reject) => {
+    const chunks: Uint8Array[] | Buffer[] = [];
+    readableStream?.on("data", (data) => {
+      chunks.push(data instanceof Buffer ? data : Buffer.from(data));
+    });
+    readableStream?.on("end", () => {
+      resolve(Buffer.concat(chunks));
+    });
+    readableStream?.on("error", reject);
+  });
+}
+
+const uploadFile = async (
+  fileName: any,
+  filePath: string,
+  configuration: {
+    accountName: string;
+    accountKey: string;
+    shareName: string;
+  },
+  directoryName: string
+) => {
+  const { accountName: account, accountKey, shareName } = configuration;
+  const credential = new StorageSharedKeyCredential(account, accountKey);
+  const serviceClient = new ShareServiceClient(
+    `https://${account}.file.core.windows.net`,
+    credential
+  );
+  const shareClient = serviceClient.getShareClient(shareName);
+  const directoryClient = shareClient.getDirectoryClient(directoryName);
+  const fileClient = directoryClient.getFileClient(fileName);
+  const content = fs.readFileSync(filePath);
+  await fileClient.create(content.length);
+  await fileClient.uploadRange(content, 0, content.length);
+};
+
+const removeFileFromTempPath = (filePath: string) => {
+  fs.unlink(filePath, (err) => {
+    if (err) {
+      console.error("Error deleting file:", err);
+      return;
+    }
+    console.log("File deleted successfully");
+  });
+};
