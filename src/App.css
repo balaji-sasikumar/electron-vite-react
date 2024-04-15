@@ -1,8 +1,8 @@
 #root {
   max-width: 1280px;
-  margin: 0 auto;
+  /* margin: 0 auto; */
   padding: 2rem;
-  text-align: center;
+  /* text-align: center; */
 }
 
 .logo-box {
@@ -45,7 +45,8 @@
   color: #888;
 }
 
-.flex-center {
+.flex-center,
+.container {
   display: flex;
   align-items: center;
   justify-content: center;
@@ -63,11 +64,6 @@ button {
   transition: background-color 300ms;
 }
 
-.container {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-}
 .info-box {
   margin: 1em;
   padding: 0.5em;

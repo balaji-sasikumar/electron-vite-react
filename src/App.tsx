@@ -2,6 +2,12 @@ import { useEffect, useState } from "react";
 import "./App.css";
 import Modal from "./components/update/Modal";
 import SettingsComponent from "./components/update/Settings/settings";
+import FileExplorer from "./components/update/FileExplorer/file-explorer";
+
+interface File {
+  kind: string;
+  name: string;
+}
 function App() {
   const [message, setMessage] = useState("");
   const [date, setDate] = useState("");
@@ -85,43 +91,19 @@ function App() {
   // );
 
   return (
-    <div>
-      <h1>Files</h1>
-      <ul>
-        {files.map((file) => (
-          <li
-            key={file.name}
-            onClick={() => {
-              openFile(file);
-            }}
-          >
-            {file.name}
-          </li>
-        ))}
-      </ul>
-    </div>
+    <>
+      <Modal
+        open={modalOpen}
+        cancelText={modalBtn?.cancelText}
+        okText={modalBtn?.okText}
+        onCancel={modalBtn?.onCancel}
+        onOk={modalBtn?.onOk}
+      ></Modal>
+      <FileExplorer files={files} openFile={openFile} />
+    </>
+
     // <SettingsComponent />
   );
 }
-
-// function showFiles(files: any[]) {
-//   return (
-//     <div>
-//       <h1>Files</h1>
-//       <ul>
-//         {files.map((file) => (
-//           <li
-//             key={file.name}
-//             onClick={() => {
-//               openFile(file);
-//             }}
-//           >
-//             {file.name}
-//           </li>
-//         ))}
-//       </ul>
-//     </div>
-//   );
-// }
 
 export default App;
