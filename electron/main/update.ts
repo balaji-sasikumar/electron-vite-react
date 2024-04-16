@@ -12,10 +12,32 @@ import {
   StorageSharedKeyCredential,
 } from "@azure/storage-file-share";
 
-import { chunkSeparator, DATA_FORMAT_NOT_SUPPORTED, chunkSize } from "./utils";
-const key = "Balaji123456";
+import {
+  key,
+  chunkSeparator,
+  DATA_FORMAT_NOT_SUPPORTED,
+  chunkSize,
+} from "./utils";
 
 export function update(win: Electron.BrowserWindow) {
+  ipcMain.handle(
+    "delete-file",
+    async (
+      ipcEvent: Electron.IpcMainInvokeEvent,
+      configuration,
+      folderName,
+      fileName
+    ) => {
+      configuration = JSON.parse(configuration);
+      await deleteFile(configuration, folderName, fileName);
+      ipcEvent.sender.send(
+        "file-processing",
+        `The file ${fileName} is deleted successfully`,
+        `${new Date().toLocaleString()}`
+      );
+    }
+  );
+
   ipcMain.handle(
     "convert-file",
     async (ipcEvent: Electron.IpcMainInvokeEvent) => {
@@ -98,9 +120,13 @@ export function update(win: Electron.BrowserWindow) {
   );
   ipcMain.handle(
     "get-file",
-    async (ipcEvent: Electron.IpcMainInvokeEvent, configuration) => {
+    async (
+      ipcEvent: Electron.IpcMainInvokeEvent,
+      configuration,
+      folderName
+    ) => {
       configuration = JSON.parse(configuration);
-      const res = await listShares(configuration, "");
+      const res = await listFiles(configuration, folderName);
       ipcEvent.sender.send("get-fileshare-data", res);
       return res;
     }
@@ -284,7 +310,7 @@ function openFile(tempPath: string, newPath: string, base64Data: string) {
   });
 }
 
-const listShares = async (
+const listFiles = async (
   configuration: { accountName: string; accountKey: string; shareName: string },
   directoryName: string
 ) => {
@@ -363,6 +389,23 @@ const uploadFile = async (
   const content = fs.readFileSync(filePath);
   await fileClient.create(content.length);
   await fileClient.uploadRange(content, 0, content.length);
+};
+
+const deleteFile = async (
+  configuration: { accountName: string; accountKey: string; shareName: string },
+  directoryName: string,
+  fileName: string
+) => {
+  const { accountName: account, accountKey, shareName } = configuration;
+  const credential = new StorageSharedKeyCredential(account, accountKey);
+  const serviceClient = new ShareServiceClient(
+    `https://${account}.file.core.windows.net`,
+    credential
+  );
+  const shareClient = serviceClient.getShareClient(shareName);
+  const directoryClient = shareClient.getDirectoryClient(directoryName);
+  const fileClient = directoryClient.getFileClient(fileName);
+  await fileClient.delete();
 };
 
 const removeFileFromTempPath = (filePath: string) => {

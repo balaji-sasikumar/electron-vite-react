@@ -3,10 +3,20 @@ import "./App.css";
 import Modal from "./components/update/Modal";
 import SettingsComponent from "./components/update/Settings/settings";
 import FileExplorer from "./components/update/FileExplorer/file-explorer";
+import { ThemeProvider, createTheme } from "@mui/material/styles";
+import CssBaseline from "@mui/material/CssBaseline";
 
+const darkTheme = createTheme({
+  palette: {
+    mode: "dark",
+  },
+});
 interface File {
   kind: string;
   name: string;
+  properties: {
+    contentLength: number;
+  };
 }
 function App() {
   const [message, setMessage] = useState("");
@@ -27,7 +37,8 @@ function App() {
   useEffect(() => {
     (async () => {
       const configuration = localStorage.getItem("configuration");
-      await window.ipcRenderer.invoke("get-file", configuration);
+      let directoryName = localStorage.getItem("directories");
+      await window.ipcRenderer.invoke("get-file", configuration, directoryName);
 
       window.ipcRenderer.on("file-processing", (event, message, date) => {
         console.log("file processing message", message, date);
@@ -37,9 +48,8 @@ function App() {
       });
 
       window.ipcRenderer.on("get-fileshare-data", (event, file) => {
-        console.log("Received message from main process: ", file);
+        console.log("file share data", file);
         setFiles(file);
-        console.log(files);
       });
     })();
 
@@ -60,30 +70,24 @@ function App() {
     await window.ipcRenderer.invoke("get-file");
   };
 
-  const openFile = async (file: any) => {
-    const configuration = localStorage.getItem("configuration");
-
-    await window.ipcRenderer.invoke("open-file", file, configuration);
-  };
-
   // return (
   //   <div className="App">
-  //     <Modal
-  //       open={modalOpen}
-  //       cancelText={modalBtn?.cancelText}
-  //       okText={modalBtn?.okText}
-  //       onCancel={modalBtn?.onCancel}
-  //       onOk={modalBtn?.onOk}
-  //     >
-  //       {message && (
-  //         <div className="container">
-  //           <div className="info-box">
-  //             <h4>{message}</h4>
-  //             <h5 style={{ textAlign: "right" }}>{date}</h5>
-  //           </div>
-  //         </div>
-  //       )}
-  //     </Modal>
+  // <Modal
+  //   open={modalOpen}
+  //   cancelText={modalBtn?.cancelText}
+  //   okText={modalBtn?.okText}
+  //   onCancel={modalBtn?.onCancel}
+  //   onOk={modalBtn?.onOk}
+  // >
+  //   {message && (
+  //     <div className="container">
+  //       <div className="info-box">
+  //         <h4>{message}</h4>
+  //         <h5 style={{ textAlign: "right" }}>{date}</h5>
+  //       </div>
+  //     </div>
+  //   )}
+  // </Modal>;
   //     <button onClick={open}>Open Explorer</button>
   //     <button onClick={convertFile}>Convert File</button>
   //     <button onClick={getShareFiles}>get File</button>
@@ -92,14 +96,26 @@ function App() {
 
   return (
     <>
-      <Modal
-        open={modalOpen}
-        cancelText={modalBtn?.cancelText}
-        okText={modalBtn?.okText}
-        onCancel={modalBtn?.onCancel}
-        onOk={modalBtn?.onOk}
-      ></Modal>
-      <FileExplorer files={files} openFile={openFile} />
+      <ThemeProvider theme={darkTheme}>
+        <CssBaseline />
+        <Modal
+          open={modalOpen}
+          cancelText={modalBtn?.cancelText}
+          okText={modalBtn?.okText}
+          onCancel={modalBtn?.onCancel}
+          onOk={modalBtn?.onOk}
+        >
+          {message && (
+            <div className="container">
+              <div className="info-box">
+                <h4>{message}</h4>
+                <h5 style={{ textAlign: "right" }}>{date}</h5>
+              </div>
+            </div>
+          )}
+        </Modal>
+        <FileExplorer files={files} />
+      </ThemeProvider>
     </>
 
     // <SettingsComponent />

@@ -4,10 +4,12 @@
   align-items: center;
   color: white;
   margin: 1em 0;
+  gap: 1em;
 }
 .row {
   display: flex;
   justify-content: flex-start;
   margin: 1em 0;
   gap: 1em;
+  align-items: center;
 }

@@ -20,6 +20,9 @@
   },
   "dependencies": {
     "@azure/storage-file-share": "^12.17.0",
+    "@emotion/react": "^11.11.4",
+    "@emotion/styled": "^11.11.5",
+    "@mui/material": "^5.15.15",
     "@ronomon/opened": "^1.5.2",
     "crypto-ts": "^1.0.2",
     "electron-updater": "^6.1.8",
