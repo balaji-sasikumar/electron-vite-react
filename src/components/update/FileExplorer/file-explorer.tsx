@@ -187,13 +187,13 @@ const FileExplorer: React.FC<Props> = ({ files }) => {
         </div>
       </div>
       <TableContainer component={Paper}>
-        <Table sx={{ minWidth: 900 }} stickyHeader aria-label="sticky table">
+        <Table sx={{ minWidth: 600 }} stickyHeader aria-label="sticky table">
           <TableHead>
             <TableRow>
               <TableCell>Name</TableCell>
-              <TableCell align="right">Type</TableCell>
-              <TableCell align="right">Size</TableCell>
-              <TableCell align="right"></TableCell>
+              <TableCell>Type</TableCell>
+              <TableCell>Size</TableCell>
+              <TableCell></TableCell>
             </TableRow>
           </TableHead>
           <TableBody>
@@ -210,15 +210,16 @@ const FileExplorer: React.FC<Props> = ({ files }) => {
                   }}
                   className="cursor-pointer"
                 >
-                  {row.name}
+                  {row.kind === "file" ? row.name.split(".txt")[0] : row.name}
                 </TableCell>
-                <TableCell align="right">{row.kind}</TableCell>
-                <TableCell align="right">
+                <TableCell>
+                  {row.kind.charAt(0).toUpperCase() + row.kind.slice(1)}
+                </TableCell>
+                <TableCell>
                   {row.kind === "file" &&
                     convertContentLength(row.properties.contentLength)}
                 </TableCell>
                 <TableCell
-                  align="right"
                   className="cursor-pointer"
                   onClick={() => deleteFile(row)}
                 >
