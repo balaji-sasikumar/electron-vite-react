@@ -1,7 +1,7 @@
 .top-bar {
   display: flex;
   justify-content: flex-start;
-  align-items: center;
+  /* align-items: center; */
   color: white;
   margin: 1em 0;
   gap: 1em;

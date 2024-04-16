@@ -37,85 +37,70 @@ export function update(win: Electron.BrowserWindow) {
       );
     }
   );
-
   ipcMain.handle(
-    "convert-file",
-    async (ipcEvent: Electron.IpcMainInvokeEvent) => {
-      let filePaths = await dialog.showOpenDialog({
-        properties: ["openFile"],
-      });
-      if (filePaths.canceled) {
-        return "canceled";
+    "create-directory",
+    async (
+      ipcEvent: Electron.IpcMainInvokeEvent,
+      configuration,
+      currentDirectoryPath,
+      directoryName
+    ) => {
+      configuration = JSON.parse(configuration);
+      await addDirectory(configuration, currentDirectoryPath, directoryName);
+    }
+  );
+  ipcMain.handle(
+    "delete-directory",
+    async (
+      ipcEvent: Electron.IpcMainInvokeEvent,
+      configuration,
+      directoryPath
+    ) => {
+      configuration = JSON.parse(configuration);
+      try {
+        await deleteDirectory(configuration, directoryPath);
+      } catch (error: any) {
+        ipcEvent.sender.send(
+          "file-processing",
+          error.details.message,
+          `${new Date().toLocaleString()}`
+        );
       }
-      let selectedPath = filePaths.filePaths[0];
-      encryptAndSaveFile(selectedPath, selectedPath + ".txt");
-      ipcEvent.sender.send(
-        "file-processing",
-        `The file ${selectedPath} is converted successfully`,
-        `${new Date().toLocaleString()}`
-      );
     }
   );
 
   ipcMain.handle(
-    "open-dialog",
-    async (ipcEvent: Electron.IpcMainInvokeEvent) => {
+    "upload-from-pc",
+    async (
+      ipcEvent: Electron.IpcMainInvokeEvent,
+      configuration,
+      directories
+    ) => {
       let filePaths = await dialog.showOpenDialog({
         properties: ["openFile"],
       });
       if (filePaths.canceled) {
         return "canceled";
       }
+      configuration = JSON.parse(configuration);
+
       let selectedPath = filePaths.filePaths[0];
-
-      if (!selectedPath.endsWith(".txt")) {
-        ipcEvent.sender.send(
-          "file-processing",
-          `The file ${selectedPath} is not supported`,
-          `${new Date().toLocaleString()}`
-        );
-        return;
-      }
       let tempPath = app.getPath("temp");
-      let fileName = path.basename(selectedPath).split(".txt")[0];
-      let newPath = tempPath + fileName;
+      let toPath = tempPath + path.basename(selectedPath) + ".txt";
 
-      fs.readFile(selectedPath, (err, data) => {
-        if (err) {
-          console.error("Error reading file:", err);
-          return;
-        }
-        let decrypted = decryptFile(data.toString());
-
-        if (decrypted === DATA_FORMAT_NOT_SUPPORTED) {
-          ipcEvent.sender.send(
-            "file-processing",
-            `The file ${selectedPath} is not supported`,
-            `${new Date().toLocaleString()}`
-          );
-          return;
-        }
-
-        const base64Data = decrypted.split(",")[1];
-
-        openFile(tempPath, newPath, base64Data);
-      });
-      let paths = [newPath];
-
-      let intervalId: NodeJS.Timeout;
-      intervalId = setInterval(async () => {
-        let isFileOpen = await isFileOpened(paths);
-        if (!isFileOpen) {
-          await encryptAndSaveFile(newPath, selectedPath);
-          clearInterval(intervalId!);
-          removeFileFromTempPath(newPath);
-          ipcEvent.sender.send(
-            "file-processing",
-            `The file ${selectedPath} is processed successfully`,
-            `${new Date().toLocaleString()}`
-          );
-        }
-      }, 5000);
+      await encryptAndSaveFile(selectedPath, toPath);
+      await uploadFile(
+        path.basename(selectedPath) + ".txt",
+        toPath,
+        configuration,
+        directories
+      );
+      removeFileFromTempPath(toPath);
+      ipcEvent.sender.send(
+        "file-processing",
+        `The file ${path.basename(selectedPath)} is uploaded successfully`,
+        `${new Date().toLocaleString()}`
+      );
     }
   );
   ipcMain.handle(
@@ -133,7 +118,12 @@ export function update(win: Electron.BrowserWindow) {
   );
   ipcMain.handle(
     "open-file",
-    async (ipcEvent: Electron.IpcMainInvokeEvent, file, configuration) => {
+    async (
+      ipcEvent: Electron.IpcMainInvokeEvent,
+      file,
+      configuration,
+      directories
+    ) => {
       configuration = JSON.parse(configuration);
       if (!file.name.endsWith(".txt")) {
         ipcEvent.sender.send(
@@ -143,7 +133,7 @@ export function update(win: Electron.BrowserWindow) {
         );
         return;
       }
-      let fileData = await downloadFile(file, configuration, "");
+      let fileData = await downloadFile(file, configuration, directories);
       let tempPath = app.getPath("temp");
       let fileName = file.name.split(".txt")[0];
       let newPath = tempPath + fileName;
@@ -167,7 +157,12 @@ export function update(win: Electron.BrowserWindow) {
         let isFileOpen = await isFileOpened(paths);
         if (!isFileOpen) {
           await encryptAndSaveFile(newPath, newPath + ".txt");
-          await uploadFile(file.name, newPath + ".txt", configuration, "");
+          await uploadFile(
+            file.name,
+            newPath + ".txt",
+            configuration,
+            directories
+          );
           removeFileFromTempPath(newPath);
           removeFileFromTempPath(newPath + ".txt");
           clearInterval(intervalId!);
@@ -406,6 +401,37 @@ const deleteFile = async (
   const directoryClient = shareClient.getDirectoryClient(directoryName);
   const fileClient = directoryClient.getFileClient(fileName);
   await fileClient.delete();
+};
+
+const addDirectory = async (
+  configuration: { accountName: string; accountKey: string; shareName: string },
+  currentDirectoryPath: string,
+  directoryName: string
+) => {
+  const { accountName: account, accountKey, shareName } = configuration;
+  const credential = new StorageSharedKeyCredential(account, accountKey);
+  const serviceClient = new ShareServiceClient(
+    `https://${account}.file.core.windows.net`,
+    credential
+  );
+  const shareClient = serviceClient.getShareClient(shareName);
+  const directoryClient = shareClient.getDirectoryClient(currentDirectoryPath);
+  await directoryClient.createSubdirectory(directoryName);
+};
+
+const deleteDirectory = async (
+  configuration: { accountName: string; accountKey: string; shareName: string },
+  directoryPath: string
+) => {
+  const { accountName: account, accountKey, shareName } = configuration;
+  const credential = new StorageSharedKeyCredential(account, accountKey);
+  const serviceClient = new ShareServiceClient(
+    `https://${account}.file.core.windows.net`,
+    credential
+  );
+  const shareClient = serviceClient.getShareClient(shareName);
+  const directoryClient = shareClient.getDirectoryClient(directoryPath);
+  await directoryClient.delete();
 };
 
 const removeFileFromTempPath = (filePath: string) => {
