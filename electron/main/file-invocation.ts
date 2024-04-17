@@ -111,7 +111,6 @@ export function fileInvocation(win: Electron.BrowserWindow) {
       configuration = JSON.parse(configuration);
       const res = await listFiles(configuration, folderName);
       ipcEvent.sender.send(InvokeEvent.GetFileResponse, res);
-      return res;
     }
   );
   ipcMain.handle(

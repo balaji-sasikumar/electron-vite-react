@@ -11,6 +11,7 @@ import Button from "@mui/material/Button";
 import TextField from "@mui/material/TextField";
 import Modal from "@mui/material/Modal";
 import "./file-explorer.css";
+import { InvokeEvent } from "@/enums/invoke-event.enum";
 interface File {
   kind: string;
   name: string;
@@ -52,19 +53,27 @@ const FileExplorer: React.FC<Props> = ({ files }) => {
     directories = dirs.join("/");
     setCurrentDirectory(dirs[dirs.length - 1]);
     localStorage.setItem("directories", directories);
-    await window.ipcRenderer.invoke("get-file", configuration, directories);
+    await window.ipcRenderer.invoke(
+      InvokeEvent.GetFile,
+      configuration,
+      directories
+    );
   };
 
   const createFolder = async () => {
     const configuration = localStorage.getItem("configuration");
     let directories = localStorage.getItem("directories") || "";
     await window.ipcRenderer.invoke(
-      "create-directory",
+      InvokeEvent.CreateDirectory,
       configuration,
       directories,
       folderName
     );
-    await window.ipcRenderer.invoke("get-file", configuration, directories);
+    await window.ipcRenderer.invoke(
+      InvokeEvent.GetFile,
+      configuration,
+      directories
+    );
     handleClose();
   };
 
@@ -79,12 +88,16 @@ const FileExplorer: React.FC<Props> = ({ files }) => {
       directories += file.name;
       setCurrentDirectory(file.name);
       localStorage.setItem("directories", directories);
-      await window.ipcRenderer.invoke("get-file", configuration, directories);
+      await window.ipcRenderer.invoke(
+        InvokeEvent.GetFile,
+        configuration,
+        directories
+      );
       return;
     }
 
     await window.ipcRenderer.invoke(
-      "open-file",
+      InvokeEvent.OpenFile,
       file,
       configuration,
       directories
@@ -101,26 +114,30 @@ const FileExplorer: React.FC<Props> = ({ files }) => {
     console.log(file);
     if (file.kind === "directory") {
       await window.ipcRenderer.invoke(
-        "delete-directory",
+        InvokeEvent.DeleteDirectory,
         configuration,
         directoryPath
       );
     } else {
       await window.ipcRenderer.invoke(
-        "delete-file",
+        InvokeEvent.DeleteFile,
         configuration,
         directories,
         file.name
       );
     }
-    await window.ipcRenderer.invoke("get-file", configuration, directories);
+    await window.ipcRenderer.invoke(
+      InvokeEvent.GetFile,
+      configuration,
+      directories
+    );
   };
 
   const uploadFile = async () => {
     const configuration = localStorage.getItem("configuration");
     let directories = localStorage.getItem("directories") || "";
     await window.ipcRenderer.invoke(
-      "upload-from-pc",
+      InvokeEvent.UploadFromPC,
       configuration,
       directories
     );
@@ -144,7 +161,7 @@ const FileExplorer: React.FC<Props> = ({ files }) => {
         aria-describedby="modal-modal-description"
       >
         <Box sx={style}>
-          <div className="flex flex-col gap-4">
+          <div className="flex flex-col gap-3">
             <TextField
               id="outlined-basic"
               label="Enter Folder Name"
@@ -157,12 +174,22 @@ const FileExplorer: React.FC<Props> = ({ files }) => {
                 }
               }}
             />
-            <Button variant="contained" onClick={createFolder}>
-              Create Folder
-            </Button>
-            <Button variant="outlined" onClick={handleClose}>
-              Cancel
-            </Button>
+            <div className="flex flex-row gap-3">
+              <Button
+                variant="contained"
+                onClick={createFolder}
+                className="flex-1"
+              >
+                Create Folder
+              </Button>
+              <Button
+                variant="outlined"
+                onClick={handleClose}
+                className="flex-1"
+              >
+                Cancel
+              </Button>
+            </div>
           </div>
         </Box>
       </Modal>

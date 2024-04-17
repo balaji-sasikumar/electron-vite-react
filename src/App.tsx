@@ -9,7 +9,7 @@ import { InvokeEvent } from "./enums/invoke-event.enum";
 
 const darkTheme = createTheme({
   palette: {
-    mode: "light",
+    mode: "dark",
   },
 });
 interface File {
