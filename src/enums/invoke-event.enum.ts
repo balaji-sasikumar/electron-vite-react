@@ -7,4 +7,5 @@ export enum InvokeEvent {
   GetFile = "get-file",
   OpenFile = "open-file",
   GetFileResponse = "get-file-response",
+  TryFetch = "try-fetch",
 }

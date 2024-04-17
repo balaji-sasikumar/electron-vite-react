@@ -48,7 +48,6 @@ function App() {
       window.ipcRenderer.on(
         InvokeEvent.FileProcessing,
         (event, message, date) => {
-          console.log("file processing message", message, date);
           setMessage(message);
           setDate(date);
           setModalOpen(true);
@@ -56,7 +55,6 @@ function App() {
       );
 
       window.ipcRenderer.on(InvokeEvent.GetFileResponse, (event, file) => {
-        console.log("fileshare data", file);
         setFiles(file);
       });
     })();

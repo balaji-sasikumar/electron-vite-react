@@ -28,11 +28,7 @@ export function fileInvocation(win: Electron.BrowserWindow) {
     ) => {
       configuration = JSON.parse(configuration);
       await deleteFile(configuration, folderName, fileName);
-      ipcEvent.sender.send(
-        InvokeEvent.FileProcessing,
-        `The file ${fileName} is deleted successfully`,
-        `${new Date().toLocaleString()}`
-      );
+      ipcEvent.sender.send(InvokeEvent.TryFetch, "");
     }
   );
   ipcMain.handle(
@@ -45,6 +41,7 @@ export function fileInvocation(win: Electron.BrowserWindow) {
     ) => {
       configuration = JSON.parse(configuration);
       await addDirectory(configuration, currentDirectoryPath, directoryName);
+      ipcEvent.sender.send(InvokeEvent.TryFetch, "");
     }
   );
   ipcMain.handle(
@@ -57,6 +54,7 @@ export function fileInvocation(win: Electron.BrowserWindow) {
       configuration = JSON.parse(configuration);
       try {
         await deleteDirectory(configuration, directoryPath);
+        ipcEvent.sender.send(InvokeEvent.TryFetch, "");
       } catch (error: any) {
         ipcEvent.sender.send(
           InvokeEvent.FileProcessing,
@@ -94,6 +92,7 @@ export function fileInvocation(win: Electron.BrowserWindow) {
         directories
       );
       removeFileFromTempPath(toPath);
+      ipcEvent.sender.send(InvokeEvent.TryFetch, "");
       ipcEvent.sender.send(
         InvokeEvent.FileProcessing,
         `The file ${path.basename(selectedPath)} is uploaded successfully`,

@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import Table from "@mui/material/Table";
 import TableBody from "@mui/material/TableBody";
 import TableCell from "@mui/material/TableCell";
@@ -45,19 +45,34 @@ const FileExplorer: React.FC<Props> = ({ files }) => {
     setFolderName("");
     setOpen(false);
   };
-  const goBack = async () => {
+  useEffect(() => {
+    window.ipcRenderer.on(InvokeEvent.TryFetch, async (event) => {
+      refresh();
+    });
+
+    return () => {
+      window.ipcRenderer.off(InvokeEvent.TryFetch, () => {});
+    };
+  }, []);
+
+  const refresh = async () => {
     const configuration = localStorage.getItem("configuration");
+    let directories = localStorage.getItem("directories") || "";
+    await window.ipcRenderer.invoke(
+      InvokeEvent.GetFile,
+      configuration,
+      directories
+    );
+  };
+
+  const goBack = async () => {
     let directories = localStorage.getItem("directories") || "";
     const dirs = directories.split("/");
     dirs.pop();
     directories = dirs.join("/");
     setCurrentDirectory(dirs[dirs.length - 1]);
     localStorage.setItem("directories", directories);
-    await window.ipcRenderer.invoke(
-      InvokeEvent.GetFile,
-      configuration,
-      directories
-    );
+    refresh();
   };
 
   const createFolder = async () => {
@@ -68,11 +83,6 @@ const FileExplorer: React.FC<Props> = ({ files }) => {
       configuration,
       directories,
       folderName
-    );
-    await window.ipcRenderer.invoke(
-      InvokeEvent.GetFile,
-      configuration,
-      directories
     );
     handleClose();
   };
@@ -111,7 +121,6 @@ const FileExplorer: React.FC<Props> = ({ files }) => {
       directoryPath += "/";
     }
     directoryPath += file.name;
-    console.log(file);
     if (file.kind === "directory") {
       await window.ipcRenderer.invoke(
         InvokeEvent.DeleteDirectory,
@@ -126,11 +135,6 @@ const FileExplorer: React.FC<Props> = ({ files }) => {
         file.name
       );
     }
-    await window.ipcRenderer.invoke(
-      InvokeEvent.GetFile,
-      configuration,
-      directories
-    );
   };
 
   const uploadFile = async () => {
@@ -152,8 +156,8 @@ const FileExplorer: React.FC<Props> = ({ files }) => {
       return (contentLength / (1024 * 1024)).toFixed(2) + " MB";
     }
   }
-  return (
-    <>
+  function CreateFolderModal() {
+    return (
       <Modal
         open={open}
         onClose={handleClose}
@@ -193,7 +197,11 @@ const FileExplorer: React.FC<Props> = ({ files }) => {
           </div>
         </Box>
       </Modal>
-
+    );
+  }
+  return (
+    <>
+      {CreateFolderModal()}
       <div className="flex my-3">
         {currentDirectory && (
           <span
