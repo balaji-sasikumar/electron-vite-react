@@ -1,12 +1,10 @@
-import { app, ipcMain, shell } from "electron";
 import { createRequire } from "node:module";
-import { dialog } from "electron";
 const Opened = createRequire(import.meta.url)("@ronomon/opened");
 import * as fs from "fs";
 import { exec } from "child_process";
 import mime from "mime";
 import { AES, enc } from "crypto-ts";
-import * as path from "path";
+import { shell } from "electron";
 import {
   ShareServiceClient,
   StorageSharedKeyCredential,
@@ -18,166 +16,7 @@ import {
   DATA_FORMAT_NOT_SUPPORTED,
   chunkSize,
 } from "./utils";
-
-export function update(win: Electron.BrowserWindow) {
-  ipcMain.handle(
-    "delete-file",
-    async (
-      ipcEvent: Electron.IpcMainInvokeEvent,
-      configuration,
-      folderName,
-      fileName
-    ) => {
-      configuration = JSON.parse(configuration);
-      await deleteFile(configuration, folderName, fileName);
-      ipcEvent.sender.send(
-        "file-processing",
-        `The file ${fileName} is deleted successfully`,
-        `${new Date().toLocaleString()}`
-      );
-    }
-  );
-  ipcMain.handle(
-    "create-directory",
-    async (
-      ipcEvent: Electron.IpcMainInvokeEvent,
-      configuration,
-      currentDirectoryPath,
-      directoryName
-    ) => {
-      configuration = JSON.parse(configuration);
-      await addDirectory(configuration, currentDirectoryPath, directoryName);
-    }
-  );
-  ipcMain.handle(
-    "delete-directory",
-    async (
-      ipcEvent: Electron.IpcMainInvokeEvent,
-      configuration,
-      directoryPath
-    ) => {
-      configuration = JSON.parse(configuration);
-      try {
-        await deleteDirectory(configuration, directoryPath);
-      } catch (error: any) {
-        ipcEvent.sender.send(
-          "file-processing",
-          error.details.message,
-          `${new Date().toLocaleString()}`
-        );
-      }
-    }
-  );
-
-  ipcMain.handle(
-    "upload-from-pc",
-    async (
-      ipcEvent: Electron.IpcMainInvokeEvent,
-      configuration,
-      directories
-    ) => {
-      let filePaths = await dialog.showOpenDialog({
-        properties: ["openFile"],
-      });
-      if (filePaths.canceled) {
-        return "canceled";
-      }
-      configuration = JSON.parse(configuration);
-
-      let selectedPath = filePaths.filePaths[0];
-      let tempPath = app.getPath("temp");
-      let toPath = tempPath + path.basename(selectedPath) + ".txt";
-
-      await encryptAndSaveFile(selectedPath, toPath);
-      await uploadFile(
-        path.basename(selectedPath) + ".txt",
-        toPath,
-        configuration,
-        directories
-      );
-      removeFileFromTempPath(toPath);
-      ipcEvent.sender.send(
-        "file-processing",
-        `The file ${path.basename(selectedPath)} is uploaded successfully`,
-        `${new Date().toLocaleString()}`
-      );
-    }
-  );
-  ipcMain.handle(
-    "get-file",
-    async (
-      ipcEvent: Electron.IpcMainInvokeEvent,
-      configuration,
-      folderName
-    ) => {
-      configuration = JSON.parse(configuration);
-      const res = await listFiles(configuration, folderName);
-      ipcEvent.sender.send("get-fileshare-data", res);
-      return res;
-    }
-  );
-  ipcMain.handle(
-    "open-file",
-    async (
-      ipcEvent: Electron.IpcMainInvokeEvent,
-      file,
-      configuration,
-      directories
-    ) => {
-      configuration = JSON.parse(configuration);
-      if (!file.name.endsWith(".txt")) {
-        ipcEvent.sender.send(
-          "file-processing",
-          `The file ${file.name} is not supported`,
-          `${new Date().toLocaleString()}`
-        );
-        return;
-      }
-      let fileData = await downloadFile(file, configuration, directories);
-      let tempPath = app.getPath("temp");
-      let fileName = file.name.split(".txt")[0];
-      let newPath = tempPath + fileName;
-
-      let decrypted = decryptFile(fileData.toString());
-
-      if (decrypted === DATA_FORMAT_NOT_SUPPORTED) {
-        ipcEvent.sender.send(
-          "file-processing",
-          `The file ${fileName} is not supported`,
-          `${new Date().toLocaleString()}`
-        );
-        return;
-      }
-      const base64Data = decrypted.split(",")[1];
-
-      openFile(tempPath, newPath, base64Data);
-      let paths = [newPath];
-      let intervalId: NodeJS.Timeout;
-      intervalId = setInterval(async () => {
-        let isFileOpen = await isFileOpened(paths);
-        if (!isFileOpen) {
-          await encryptAndSaveFile(newPath, newPath + ".txt");
-          await uploadFile(
-            file.name,
-            newPath + ".txt",
-            configuration,
-            directories
-          );
-          removeFileFromTempPath(newPath);
-          removeFileFromTempPath(newPath + ".txt");
-          clearInterval(intervalId!);
-          ipcEvent.sender.send(
-            "file-processing",
-            `The file ${fileName} is processed successfully`,
-            `${new Date().toLocaleString()}`
-          );
-        }
-      }, 5000);
-    }
-  );
-}
-
-async function isFileOpened(paths: string[]): Promise<boolean> {
+export const isFileOpened = async (paths: string[]): Promise<boolean> => {
   return new Promise((resolve, reject) => {
     if (process.platform === "win32") {
       Opened.files(
@@ -198,9 +37,9 @@ async function isFileOpened(paths: string[]): Promise<boolean> {
       });
     }
   });
-}
+};
 
-async function convertFileToBase64(filePath: string): Promise<string> {
+const convertFileToBase64 = async (filePath: string): Promise<string> => {
   return new Promise((resolve, reject) =>
     fs.readFile(filePath, (err, data) => {
       if (err) {
@@ -209,9 +48,9 @@ async function convertFileToBase64(filePath: string): Promise<string> {
       resolve(Buffer.from(data).toString("base64"));
     })
   );
-}
+};
 
-function encryptFile(fileDataUrl: string) {
+const encryptFile = (fileDataUrl: string) => {
   const encryptedChunks = [];
   const totalChunks = Math.ceil(fileDataUrl.length / chunkSize);
 
@@ -226,7 +65,7 @@ function encryptFile(fileDataUrl: string) {
 
   const joinedEncryptedData = encryptedChunks.join(chunkSeparator);
   return joinedEncryptedData;
-}
+};
 function encryptionAES(msg: string, key: string) {
   if (msg && key) {
     return AES.encrypt(msg, key).toString();
@@ -253,7 +92,7 @@ function decryptionAES(msg: string, key: string) {
   }
 }
 
-function decryptFile(encryptedData: string) {
+export const decryptFile = (encryptedData: string) => {
   const encryptedChunks = encryptedData.split(chunkSeparator);
   const decryptedChunks = [];
 
@@ -266,8 +105,8 @@ function decryptFile(encryptedData: string) {
   }
   const decryptedContent = decryptedChunks.join("");
   return decryptedContent;
-}
-async function encryptAndSaveFile(fromPath: string, toPath: string) {
+};
+export const encryptAndSaveFile = async (fromPath: string, toPath: string) => {
   return new Promise<void>(async (resolve, reject) => {
     const base64Data = await convertFileToBase64(fromPath);
     const dataURL = `data:${mime.getType(toPath)};base64,${base64Data}`;
@@ -281,8 +120,12 @@ async function encryptAndSaveFile(fromPath: string, toPath: string) {
       resolve();
     });
   });
-}
-function openFile(tempPath: string, newPath: string, base64Data: string) {
+};
+export const openFile = (
+  tempPath: string,
+  newPath: string,
+  base64Data: string
+) => {
   fs.mkdir(tempPath, { recursive: true }, (err) => {
     if (err) {
       console.error("Error creating directory:", err);
@@ -303,9 +146,9 @@ function openFile(tempPath: string, newPath: string, base64Data: string) {
         });
     });
   });
-}
+};
 
-const listFiles = async (
+export const listFiles = async (
   configuration: { accountName: string; accountKey: string; shareName: string },
   directoryName: string
 ) => {
@@ -326,7 +169,7 @@ const listFiles = async (
   return fileList;
 };
 
-const downloadFile = async (
+export const downloadFile = async (
   file: any,
   configuration: { accountName: string; accountKey: string; shareName: string },
   directoryName: string
@@ -362,7 +205,7 @@ async function streamToBuffer(
   });
 }
 
-const uploadFile = async (
+export const uploadFile = async (
   fileName: any,
   filePath: string,
   configuration: {
@@ -386,7 +229,7 @@ const uploadFile = async (
   await fileClient.uploadRange(content, 0, content.length);
 };
 
-const deleteFile = async (
+export const deleteFile = async (
   configuration: { accountName: string; accountKey: string; shareName: string },
   directoryName: string,
   fileName: string
@@ -403,7 +246,7 @@ const deleteFile = async (
   await fileClient.delete();
 };
 
-const addDirectory = async (
+export const addDirectory = async (
   configuration: { accountName: string; accountKey: string; shareName: string },
   currentDirectoryPath: string,
   directoryName: string
@@ -419,7 +262,7 @@ const addDirectory = async (
   await directoryClient.createSubdirectory(directoryName);
 };
 
-const deleteDirectory = async (
+export const deleteDirectory = async (
   configuration: { accountName: string; accountKey: string; shareName: string },
   directoryPath: string
 ) => {
@@ -434,7 +277,7 @@ const deleteDirectory = async (
   await directoryClient.delete();
 };
 
-const removeFileFromTempPath = (filePath: string) => {
+export const removeFileFromTempPath = (filePath: string) => {
   fs.unlink(filePath, (err) => {
     if (err) {
       console.error("Error deleting file:", err);

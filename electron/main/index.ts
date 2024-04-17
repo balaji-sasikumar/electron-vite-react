@@ -2,7 +2,7 @@ import { app, BrowserWindow, shell, ipcMain, nativeTheme } from "electron";
 import { release } from "node:os";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { update } from "./update";
+import { fileInvocation } from "./file-invocation";
 
 globalThis.__filename = fileURLToPath(import.meta.url);
 globalThis.__dirname = dirname(__filename);
@@ -82,7 +82,7 @@ async function createWindow() {
   });
 
   // Apply electron-updater
-  update(win);
+  fileInvocation(win);
 }
 
 app.whenReady().then(createWindow);

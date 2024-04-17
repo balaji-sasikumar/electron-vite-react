@@ -32,7 +32,7 @@ body {
   display: flex;
   min-width: 320px;
   min-height: 100vh;
-  background-image: url("../bg-watermark.png");
+  background-image: url("./assets/bg-watermark.png");
   background-repeat: no-repeat;
   background-position: bottom -170px right -100px;
 }

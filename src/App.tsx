@@ -5,6 +5,7 @@ import SettingsComponent from "./components/update/Settings/settings";
 import FileExplorer from "./components/update/FileExplorer/file-explorer";
 import { ThemeProvider, createTheme } from "@mui/material/styles";
 import CssBaseline from "@mui/material/CssBaseline";
+import { InvokeEvent } from "./enums/invoke-event.enum";
 
 const darkTheme = createTheme({
   palette: {
@@ -38,24 +39,31 @@ function App() {
     (async () => {
       const configuration = localStorage.getItem("configuration");
       let directoryName = localStorage.getItem("directories");
-      await window.ipcRenderer.invoke("get-file", configuration, directoryName);
+      await window.ipcRenderer.invoke(
+        InvokeEvent.GetFile,
+        configuration,
+        directoryName
+      );
 
-      window.ipcRenderer.on("file-processing", (event, message, date) => {
-        console.log("file processing message", message, date);
-        setMessage(message);
-        setDate(date);
-        setModalOpen(true);
-      });
+      window.ipcRenderer.on(
+        InvokeEvent.FileProcessing,
+        (event, message, date) => {
+          console.log("file processing message", message, date);
+          setMessage(message);
+          setDate(date);
+          setModalOpen(true);
+        }
+      );
 
-      window.ipcRenderer.on("get-fileshare-data", (event, file) => {
+      window.ipcRenderer.on(InvokeEvent.GetFileResponse, (event, file) => {
         console.log("fileshare data", file);
         setFiles(file);
       });
     })();
 
     return () => {
-      window.ipcRenderer.off("file-processing", () => {});
-      window.ipcRenderer.off("get-fileshare-data", () => {});
+      window.ipcRenderer.off(InvokeEvent.FileProcessing, () => {});
+      window.ipcRenderer.off(InvokeEvent.GetFileResponse, () => {});
     };
   }, []);
 
