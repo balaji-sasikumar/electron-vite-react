@@ -34,7 +34,9 @@ const style = {
   p: 4,
 };
 const FileExplorer: React.FC<Props> = ({ files }) => {
-  const [currentDirectory, setCurrentDirectory] = useState<string>("");
+  const [currentDirectory, setCurrentDirectory] = useState<string>(
+    (localStorage.getItem("directories") || "").split("/").pop() || ""
+  );
   const [open, setOpen] = React.useState(false);
   const [folderName, setFolderName] = React.useState("");
   const handleOpen = () => setOpen(true);
@@ -135,59 +137,69 @@ const FileExplorer: React.FC<Props> = ({ files }) => {
   }
   return (
     <>
-      <div>
-        <Modal
-          open={open}
-          onClose={handleClose}
-          aria-labelledby="modal-modal-title"
-          aria-describedby="modal-modal-description"
-        >
-          <Box sx={style}>
-            <div className="flex flex-col gap-4">
-              <TextField
-                id="outlined-basic"
-                label="Enter Folder Name"
-                variant="outlined"
-                value={folderName}
-                onChange={(e) => setFolderName(e.target.value)}
-              />
-              <Button variant="outlined" onClick={createFolder}>
-                OK
-              </Button>
-              <Button variant="outlined" onClick={handleClose}>
-                Cancel
-              </Button>
-            </div>
-          </Box>
-        </Modal>
-      </div>
-      <div className="top-bar">
-        <span
-          className="material-symbols-outlined  cursor-pointer"
-          onClick={() => {
-            goBack();
-          }}
-        >
-          chevron_left
-        </span>
+      <Modal
+        open={open}
+        onClose={handleClose}
+        aria-labelledby="modal-modal-title"
+        aria-describedby="modal-modal-description"
+      >
+        <Box sx={style}>
+          <div className="flex flex-col gap-4">
+            <TextField
+              id="outlined-basic"
+              label="Enter Folder Name"
+              variant="outlined"
+              value={folderName}
+              onChange={(e) => setFolderName(e.target.value)}
+              onKeyUp={(e) => {
+                if (e.key === "Enter") {
+                  createFolder();
+                }
+              }}
+            />
+            <Button variant="contained" onClick={createFolder}>
+              Create Folder
+            </Button>
+            <Button variant="outlined" onClick={handleClose}>
+              Cancel
+            </Button>
+          </div>
+        </Box>
+      </Modal>
+
+      <div className="flex my-3">
+        {currentDirectory && (
+          <span
+            className="material-symbols-outlined  cursor-pointer"
+            onClick={() => {
+              goBack();
+            }}
+          >
+            chevron_left
+          </span>
+        )}
         <span className="folder">{currentDirectory || "Home"}</span>
-        <div
-          className="new-folder flex items-center justify-center gap-2 cursor-pointer"
-          onClick={handleOpen}
-        >
-          <span className="material-symbols-outlined">create_new_folder</span>
-          Add Folder
-        </div>
-        <div
-          className="upload-file flex items-center justify-center gap-2 cursor-pointer"
-          onClick={uploadFile}
-        >
-          <span className="material-symbols-outlined">upload_file</span>
-          Upload File
+        <div className="ml-auto flex justify-end gap-3">
+          <Button
+            variant="outlined"
+            className="new-folder flex items-center justify-center gap-2 cursor-pointer"
+            onClick={handleOpen}
+          >
+            <span className="material-symbols-outlined">create_new_folder</span>
+            Add Folder
+          </Button>
+          <Button
+            variant="contained"
+            className="upload-file flex items-center justify-center gap-2 cursor-pointer"
+            onClick={uploadFile}
+          >
+            <span className="material-symbols-outlined">upload_file</span>
+            Upload File
+          </Button>
         </div>
       </div>
       <TableContainer component={Paper}>
-        <Table sx={{ minWidth: 600 }} stickyHeader aria-label="sticky table">
+        <Table stickyHeader aria-label="sticky table">
           <TableHead>
             <TableRow>
               <TableCell>Name</TableCell>
@@ -210,7 +222,18 @@ const FileExplorer: React.FC<Props> = ({ files }) => {
                   }}
                   className="cursor-pointer"
                 >
-                  {row.kind === "file" ? row.name.split(".txt")[0] : row.name}
+                  <div className="flex items-center gap-2">
+                    {row.kind === "directory" ? (
+                      <span className="material-symbols-outlined material-symbols-fill text-yellow-600">
+                        folder_open
+                      </span>
+                    ) : (
+                      <span className="material-symbols-outlined material-symbols-fill text-blue-500">
+                        description
+                      </span>
+                    )}
+                    {row.kind === "file" ? row.name.split(".txt")[0] : row.name}
+                  </div>
                 </TableCell>
                 <TableCell>
                   {row.kind.charAt(0).toUpperCase() + row.kind.slice(1)}
@@ -223,7 +246,9 @@ const FileExplorer: React.FC<Props> = ({ files }) => {
                   className="cursor-pointer"
                   onClick={() => deleteFile(row)}
                 >
-                  <span className="material-symbols-outlined">delete</span>
+                  <span className="material-symbols-outlined font-extralight">
+                    delete_forever
+                  </span>
                 </TableCell>
               </TableRow>
             ))}

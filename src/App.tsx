@@ -8,7 +8,7 @@ import CssBaseline from "@mui/material/CssBaseline";
 
 const darkTheme = createTheme({
   palette: {
-    mode: "dark",
+    mode: "light",
   },
 });
 interface File {
@@ -31,7 +31,7 @@ function App() {
     onOk?: () => void;
   }>({
     onCancel: () => setModalOpen(false),
-    onOk: () => window.ipcRenderer.invoke("start-download"),
+    onOk: () => setModalOpen(false),
   });
 
   useEffect(() => {
@@ -48,7 +48,7 @@ function App() {
       });
 
       window.ipcRenderer.on("get-fileshare-data", (event, file) => {
-        console.log("file share data", file);
+        console.log("fileshare data", file);
         setFiles(file);
       });
     })();
@@ -58,41 +58,6 @@ function App() {
       window.ipcRenderer.off("get-fileshare-data", () => {});
     };
   }, []);
-
-  const open = async () => {
-    await window.ipcRenderer.invoke("open-dialog");
-  };
-  const convertFile = async () => {
-    await window.ipcRenderer.invoke("convert-file");
-  };
-
-  const getShareFiles = async () => {
-    await window.ipcRenderer.invoke("get-file");
-  };
-
-  // return (
-  //   <div className="App">
-  // <Modal
-  //   open={modalOpen}
-  //   cancelText={modalBtn?.cancelText}
-  //   okText={modalBtn?.okText}
-  //   onCancel={modalBtn?.onCancel}
-  //   onOk={modalBtn?.onOk}
-  // >
-  //   {message && (
-  //     <div className="container">
-  //       <div className="info-box">
-  //         <h4>{message}</h4>
-  //         <h5 style={{ textAlign: "right" }}>{date}</h5>
-  //       </div>
-  //     </div>
-  //   )}
-  // </Modal>;
-  //     <button onClick={open}>Open Explorer</button>
-  //     <button onClick={convertFile}>Convert File</button>
-  //     <button onClick={getShareFiles}>get File</button>
-  //   </div>
-  // );
 
   return (
     <>

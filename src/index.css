@@ -32,6 +32,9 @@ body {
   display: flex;
   min-width: 320px;
   min-height: 100vh;
+  background-image: url("../bg-watermark.png");
+  background-repeat: no-repeat;
+  background-position: bottom -170px right -100px;
 }
 
 h1 {
@@ -90,4 +93,7 @@ code {
   code {
     background-color: #f9f9f9;
   }
+}
+.material-symbols-fill {
+  font-variation-settings: "FILL" 1, "wght" 400, "GRAD" 0, "opsz" 24;
 }
