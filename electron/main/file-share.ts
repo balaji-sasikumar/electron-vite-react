@@ -224,9 +224,7 @@ export const uploadFile = async (
   const shareClient = serviceClient.getShareClient(shareName);
   const directoryClient = shareClient.getDirectoryClient(directoryName);
   const fileClient = directoryClient.getFileClient(fileName);
-  const content = fs.readFileSync(filePath);
-  await fileClient.create(content.length);
-  await fileClient.uploadRange(content, 0, content.length);
+  await fileClient.uploadFile(filePath);
 };
 
 export const deleteFile = async (
@@ -283,6 +281,6 @@ export const removeFileFromTempPath = (filePath: string) => {
       console.error("Error deleting file:", err);
       return;
     }
-    console.log("File deleted successfully");
+    console.log("File removed from temp successfully");
   });
 };

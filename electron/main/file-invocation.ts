@@ -1,7 +1,7 @@
 import { app, ipcMain } from "electron";
 import { dialog } from "electron";
 import * as path from "path";
-import { DATA_FORMAT_NOT_SUPPORTED } from "./utils";
+import { DATA_FORMAT_NOT_SUPPORTED, readOnlyExtensions } from "./utils";
 import { InvokeEvent } from "../../src/enums/invoke-event.enum";
 import {
   addDirectory,
@@ -120,6 +120,7 @@ export function fileInvocation(win: Electron.BrowserWindow) {
       configuration,
       directories
     ) => {
+      let isEditable = true;
       configuration = JSON.parse(configuration);
       if (!file.name.endsWith(".txt")) {
         ipcEvent.sender.send(
@@ -147,20 +148,28 @@ export function fileInvocation(win: Electron.BrowserWindow) {
       const base64Data = decrypted.split(",")[1];
 
       openFile(tempPath, newPath, base64Data);
+      const actualExt = file.name
+        .split(".")
+        [file.name.split(".").length - 2].toLowerCase();
+      isEditable = !readOnlyExtensions.includes(actualExt);
+
       let paths = [newPath];
       let intervalId: NodeJS.Timeout;
       intervalId = setInterval(async () => {
         let isFileOpen = await isFileOpened(paths);
         if (!isFileOpen) {
-          await encryptAndSaveFile(newPath, newPath + ".txt");
-          await uploadFile(
-            file.name,
-            newPath + ".txt",
-            configuration,
-            directories
-          );
+          if (isEditable) {
+            await encryptAndSaveFile(newPath, newPath + ".txt");
+            await uploadFile(
+              file.name,
+              newPath + ".txt",
+              configuration,
+              directories
+            );
+            removeFileFromTempPath(newPath + ".txt");
+          }
+
           removeFileFromTempPath(newPath);
-          removeFileFromTempPath(newPath + ".txt");
           clearInterval(intervalId!);
           ipcEvent.sender.send(
             InvokeEvent.FileProcessing,
