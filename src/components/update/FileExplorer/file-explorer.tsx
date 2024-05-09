@@ -12,6 +12,7 @@ import TextField from "@mui/material/TextField";
 import Modal from "@mui/material/Modal";
 import "./file-explorer.css";
 import { InvokeEvent } from "@/enums/invoke-event.enum";
+import AlertDialog from "../Dialog/dialog";
 interface File {
   kind: string;
   name: string;
@@ -40,6 +41,19 @@ const FileExplorer: React.FC<Props> = ({ files }) => {
   );
   const [open, setOpen] = React.useState(false);
   const [folderName, setFolderName] = React.useState("");
+
+  const [message, setMessage] = useState("");
+  const [title, setTitle] = useState("");
+  const [modalOpen, setModalOpen] = useState<boolean>(false);
+  const [modalBtn, setModalBtn] = useState<{
+    cancelText?: string;
+    okText?: string;
+    onCancel?: () => void;
+    onOk?: () => void;
+  }>({
+    onCancel: () => setModalOpen(false),
+    onOk: () => setModalOpen(false),
+  });
   const handleOpen = () => setOpen(true);
   const handleClose = () => {
     setFolderName("");
@@ -113,6 +127,26 @@ const FileExplorer: React.FC<Props> = ({ files }) => {
       directories
     );
   };
+
+  const deleteDialog = async (file: any) => {
+    setModalOpen(true);
+    setTitle("Delete File");
+    setMessage(
+      `Are you sure you want to delete ${
+        file.kind === "file" ? "file" : "folder"
+      } ${file.name}?`
+    );
+    setModalBtn({
+      onOk: async () => {
+        await deleteFile(file);
+        setModalOpen(false);
+      },
+      onCancel: () => {
+        setModalOpen(false);
+      },
+    });
+  };
+
   const deleteFile = async (file: any) => {
     const configuration = localStorage.getItem("configuration");
     let directories = localStorage.getItem("directories") || "";
@@ -201,6 +235,15 @@ const FileExplorer: React.FC<Props> = ({ files }) => {
   }
   return (
     <>
+      <AlertDialog
+        open={modalOpen}
+        onClose={modalBtn.onCancel || (() => {})}
+        onOk={modalBtn.onOk || (() => {})}
+        title={title}
+        message={message}
+        showCancel={true}
+        okText="Delete"
+      />
       {CreateFolderModal()}
       <div className="flex my-3">
         {currentDirectory && (
@@ -279,7 +322,7 @@ const FileExplorer: React.FC<Props> = ({ files }) => {
                 </TableCell>
                 <TableCell
                   className="cursor-pointer"
-                  onClick={() => deleteFile(row)}
+                  onClick={() => deleteDialog(row)}
                 >
                   <span className="material-symbols-outlined font-extralight">
                     delete_forever

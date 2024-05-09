@@ -1,12 +1,11 @@
 import { useEffect, useState } from "react";
 import "./App.css";
-import Modal from "./components/update/Modal";
 import SettingsComponent from "./components/update/Settings/settings";
 import FileExplorer from "./components/update/FileExplorer/file-explorer";
 import { ThemeProvider, createTheme } from "@mui/material/styles";
 import CssBaseline from "@mui/material/CssBaseline";
 import { InvokeEvent } from "./enums/invoke-event.enum";
-
+import AlertDialog from "./components/update/Dialog/dialog";
 const darkTheme = createTheme({
   palette: {
     mode: "dark",
@@ -20,10 +19,9 @@ interface File {
   };
 }
 function App() {
-  const [message, setMessage] = useState("");
-  const [date, setDate] = useState("");
   const [files, setFiles] = useState<File[]>([]);
-
+  const [message, setMessage] = useState("");
+  const [title, setTitle] = useState("");
   const [modalOpen, setModalOpen] = useState<boolean>(false);
   const [modalBtn, setModalBtn] = useState<{
     cancelText?: string;
@@ -47,9 +45,9 @@ function App() {
 
       window.ipcRenderer.on(
         InvokeEvent.FileProcessing,
-        (event, message, date) => {
+        (event, title, message) => {
+          setTitle(title);
           setMessage(message);
-          setDate(date);
           setModalOpen(true);
         }
       );
@@ -69,22 +67,14 @@ function App() {
     <>
       <ThemeProvider theme={darkTheme}>
         <CssBaseline />
-        <Modal
+        <AlertDialog
           open={modalOpen}
-          cancelText={modalBtn?.cancelText}
-          okText={modalBtn?.okText}
-          onCancel={modalBtn?.onCancel}
-          onOk={modalBtn?.onOk}
-        >
-          {message && (
-            <div className="container">
-              <div className="info-box">
-                <h4>{message}</h4>
-                <h5 style={{ textAlign: "right" }}>{date}</h5>
-              </div>
-            </div>
-          )}
-        </Modal>
+          onClose={modalBtn.onCancel || (() => {})}
+          onOk={modalBtn.onOk || (() => {})}
+          title={title}
+          message={message}
+          showCancel={false}
+        />
         <FileExplorer files={files} />
       </ThemeProvider>
     </>

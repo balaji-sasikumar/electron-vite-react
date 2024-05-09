@@ -16,6 +16,7 @@ import {
   removeFileFromTempPath,
   uploadFile,
 } from "./file-share";
+import { Status } from "../../src/enums/status.enum";
 
 export function fileInvocation(win: Electron.BrowserWindow) {
   ipcMain.handle(
@@ -58,8 +59,8 @@ export function fileInvocation(win: Electron.BrowserWindow) {
       } catch (error: any) {
         ipcEvent.sender.send(
           InvokeEvent.FileProcessing,
-          error.details.message,
-          `${new Date().toLocaleString()}`
+          Status.Error,
+          error.details.message
         );
       }
     }
@@ -95,8 +96,8 @@ export function fileInvocation(win: Electron.BrowserWindow) {
       ipcEvent.sender.send(InvokeEvent.TryFetch, "");
       ipcEvent.sender.send(
         InvokeEvent.FileProcessing,
-        `The file ${path.basename(selectedPath)} is uploaded successfully`,
-        `${new Date().toLocaleString()}`
+        Status.Success,
+        `The file ${path.basename(selectedPath)} is uploaded successfully`
       );
     }
   );
@@ -125,8 +126,8 @@ export function fileInvocation(win: Electron.BrowserWindow) {
       if (!file.name.endsWith(".txt")) {
         ipcEvent.sender.send(
           InvokeEvent.FileProcessing,
-          `The file ${file.name} is not supported`,
-          `${new Date().toLocaleString()}`
+          Status.Error,
+          `The file ${file.name} is not supported`
         );
         return;
       }
@@ -140,8 +141,8 @@ export function fileInvocation(win: Electron.BrowserWindow) {
       if (decrypted === DATA_FORMAT_NOT_SUPPORTED) {
         ipcEvent.sender.send(
           InvokeEvent.FileProcessing,
-          `The file ${fileName} is not supported`,
-          `${new Date().toLocaleString()}`
+          Status.Error,
+          `The file ${fileName} is not supported`
         );
         return;
       }
@@ -173,8 +174,8 @@ export function fileInvocation(win: Electron.BrowserWindow) {
           clearInterval(intervalId!);
           ipcEvent.sender.send(
             InvokeEvent.FileProcessing,
-            `The file ${fileName} is processed successfully`,
-            `${new Date().toLocaleString()}`
+            Status.Success,
+            `The file ${fileName} is processed successfully`
           );
         }
       }, 5000);
