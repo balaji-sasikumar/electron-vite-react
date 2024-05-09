@@ -4,7 +4,8 @@ import FileExplorer from "./components/update/FileExplorer/file-explorer";
 import { ThemeProvider, createTheme } from "@mui/material/styles";
 import CssBaseline from "@mui/material/CssBaseline";
 import { InvokeEvent } from "./enums/invoke-event.enum";
-import AlertDialog from "./components/update/Dialog/dialog";
+import Snackbar from "@mui/material/Snackbar";
+import { Alert, Slide, SlideProps } from "@mui/material";
 const darkTheme = createTheme({
   palette: {
     mode: "dark",
@@ -17,34 +18,24 @@ interface File {
     contentLength: number;
   };
 }
+function SlideTransition(props: SlideProps) {
+  return <Slide {...props} direction="up" />;
+}
 function App() {
   const [files, setFiles] = useState<File[]>([]);
   const [message, setMessage] = useState("");
-  const [title, setTitle] = useState("");
-  const [modalOpen, setModalOpen] = useState<boolean>(false);
-  const [modalBtn, setModalBtn] = useState<{
-    cancelText?: string;
-    okText?: string;
-    onCancel?: () => void;
-    onOk?: () => void;
-  }>({
-    onCancel: () => setModalOpen(false),
-    onOk: () => setModalOpen(false),
-  });
+  const [severity, setSeverity] = useState<
+    "success" | "info" | "warning" | "error" | undefined
+  >("info");
+  const [snackBarOpen, setSnackBarOpen] = useState<boolean>(false);
 
   useEffect(() => {
     (async () => {
       const configuration = localStorage.getItem("configuration");
       if (configuration === null) {
-        setModalBtn({
-          ...modalBtn,
-          onOk: () => {
-            setModalOpen(false);
-          },
-        });
-        setTitle("Configuration not found");
+        setSeverity("info");
         setMessage("Please configure the application before using it.");
-        setModalOpen(true);
+        setSnackBarOpen(true);
         return;
       }
       let directoryName = localStorage.getItem("directories");
@@ -57,9 +48,9 @@ function App() {
       window.ipcRenderer.on(
         InvokeEvent.FileProcessing,
         (event, title, message) => {
-          setTitle(title);
+          setSeverity(title as any);
           setMessage(message);
-          setModalOpen(true);
+          setSnackBarOpen(true);
         }
       );
 
@@ -78,14 +69,21 @@ function App() {
     <>
       <ThemeProvider theme={darkTheme}>
         <CssBaseline />
-        <AlertDialog
-          open={modalOpen}
-          onClose={modalBtn.onCancel || (() => {})}
-          onOk={modalBtn.onOk || (() => {})}
-          title={title}
-          message={message}
-          showCancel={false}
-        />
+        <Snackbar
+          open={snackBarOpen}
+          onClose={() => setSnackBarOpen(false)}
+          autoHideDuration={5000}
+          TransitionComponent={SlideTransition}
+        >
+          <Alert
+            onClose={() => setSnackBarOpen(false)}
+            severity={severity}
+            variant="filled"
+            sx={{ width: "100%" }}
+          >
+            {message}
+          </Alert>
+        </Snackbar>
         <FileExplorer files={files} />
       </ThemeProvider>
     </>
