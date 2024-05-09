@@ -13,6 +13,8 @@ import Modal from "@mui/material/Modal";
 import "./file-explorer.css";
 import { InvokeEvent } from "@/enums/invoke-event.enum";
 import AlertDialog from "../Dialog/dialog";
+import { IconButton } from "@mui/material";
+import SettingsComponent from "../Settings/settings";
 interface File {
   kind: string;
   name: string;
@@ -31,7 +33,6 @@ const style = {
   transform: "translate(-50%, -50%)",
   width: 400,
   bgcolor: "background.paper",
-  border: "2px solid #000",
   boxShadow: 24,
   p: 4,
 };
@@ -39,8 +40,10 @@ const FileExplorer: React.FC<Props> = ({ files }) => {
   const [currentDirectory, setCurrentDirectory] = useState<string>(
     (localStorage.getItem("directories") || "").split("/").pop() || ""
   );
-  const [open, setOpen] = React.useState(false);
+  const [directoryModalOpen, setDirectoryModalOpen] = React.useState(false);
   const [folderName, setFolderName] = React.useState("");
+
+  const [settingsModalOpen, setSettingsModalOpen] = React.useState(false);
 
   const [message, setMessage] = useState("");
   const [title, setTitle] = useState("");
@@ -54,10 +57,10 @@ const FileExplorer: React.FC<Props> = ({ files }) => {
     onCancel: () => setModalOpen(false),
     onOk: () => setModalOpen(false),
   });
-  const handleOpen = () => setOpen(true);
+  const handleOpen = () => setDirectoryModalOpen(true);
   const handleClose = () => {
     setFolderName("");
-    setOpen(false);
+    setDirectoryModalOpen(false);
   };
   useEffect(() => {
     window.ipcRenderer.on(InvokeEvent.TryFetch, async (event) => {
@@ -193,7 +196,7 @@ const FileExplorer: React.FC<Props> = ({ files }) => {
   function CreateFolderModal() {
     return (
       <Modal
-        open={open}
+        open={directoryModalOpen}
         onClose={handleClose}
         aria-labelledby="modal-modal-title"
         aria-describedby="modal-modal-description"
@@ -235,6 +238,12 @@ const FileExplorer: React.FC<Props> = ({ files }) => {
   }
   return (
     <>
+      <SettingsComponent
+        open={settingsModalOpen}
+        onClose={() => {
+          setSettingsModalOpen(false);
+        }}
+      />
       <AlertDialog
         open={modalOpen}
         onClose={modalBtn.onCancel || (() => {})}
@@ -268,12 +277,20 @@ const FileExplorer: React.FC<Props> = ({ files }) => {
           </Button>
           <Button
             variant="contained"
-            className="upload-file flex items-center justify-center gap-2 cursor-pointer"
+            className="flex items-center justify-center gap-2 cursor-pointer"
             onClick={uploadFile}
           >
             <span className="material-symbols-outlined">upload_file</span>
             Upload File
           </Button>
+          <IconButton
+            onClick={() => {
+              setSettingsModalOpen(true);
+            }}
+            className="flex-1"
+          >
+            <span className="material-symbols-outlined">more_vert</span>
+          </IconButton>
         </div>
       </div>
       <TableContainer component={Paper}>

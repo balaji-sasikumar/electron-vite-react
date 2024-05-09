@@ -1,6 +1,5 @@
 import { useEffect, useState } from "react";
 import "./App.css";
-import SettingsComponent from "./components/update/Settings/settings";
 import FileExplorer from "./components/update/FileExplorer/file-explorer";
 import { ThemeProvider, createTheme } from "@mui/material/styles";
 import CssBaseline from "@mui/material/CssBaseline";
@@ -36,6 +35,18 @@ function App() {
   useEffect(() => {
     (async () => {
       const configuration = localStorage.getItem("configuration");
+      if (configuration === null) {
+        setModalBtn({
+          ...modalBtn,
+          onOk: () => {
+            setModalOpen(false);
+          },
+        });
+        setTitle("Configuration not found");
+        setMessage("Please configure the application before using it.");
+        setModalOpen(true);
+        return;
+      }
       let directoryName = localStorage.getItem("directories");
       await window.ipcRenderer.invoke(
         InvokeEvent.GetFile,
@@ -78,8 +89,6 @@ function App() {
         <FileExplorer files={files} />
       </ThemeProvider>
     </>
-
-    // <SettingsComponent />
   );
 }
 

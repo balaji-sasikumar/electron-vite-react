@@ -1,11 +1,46 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
+import Box from "@mui/material/Box";
+import Button from "@mui/material/Button";
+import TextField from "@mui/material/TextField";
+import Modal from "@mui/material/Modal";
 import "./settings.css";
 
-const SettingsComponent: React.FC = () => {
+const style = {
+  position: "absolute" as "absolute",
+  top: "50%",
+  left: "50%",
+  transform: "translate(-50%, -50%)",
+  width: 600,
+  bgcolor: "background.paper",
+  boxShadow: 24,
+  p: 4,
+};
+
+type SettingsComponentProps = {
+  open: boolean;
+  onClose?: () => void;
+};
+
+const SettingsComponent: React.FC<SettingsComponentProps> = ({
+  open,
+  onClose,
+}) => {
   const [accountName, setAccountName] = useState<string>("");
   const [accountKey, setAccountKey] = useState<string>("");
   const [shareName, setShareName] = useState<string>("");
   const [privateKey, setPrivateKey] = useState<string>("");
+  const [readOnly, setReadOnly] = useState<boolean>(false);
+  useEffect(() => {
+    const configuration = localStorage.getItem("configuration");
+    if (configuration) {
+      const config = JSON.parse(configuration);
+      setAccountName(config.accountName);
+      setAccountKey(config.accountKey);
+      setShareName(config.shareName);
+      setPrivateKey(config.privateKey);
+      setReadOnly(true);
+    }
+  }, []);
 
   const handleSave = () => {
     const storageData = {
@@ -15,48 +50,72 @@ const SettingsComponent: React.FC = () => {
       privateKey,
     };
     localStorage.setItem("configuration", JSON.stringify(storageData));
+    onClose && onClose();
+    window.location.reload();
   };
 
   return (
-    <div className="container">
-      <label htmlFor="accountName">Account Name:</label>
-      <input
-        type="text"
-        id="accountName"
-        value={accountName}
-        onChange={(e) => setAccountName(e.target.value)}
-      />
-      <br />
-
-      <label htmlFor="accountKey">Account Key:</label>
-      <input
-        type="text"
-        id="accountKey"
-        value={accountKey}
-        onChange={(e) => setAccountKey(e.target.value)}
-      />
-      <br />
-
-      <label htmlFor="shareName">Share Name:</label>
-      <input
-        type="text"
-        id="shareName"
-        value={shareName}
-        onChange={(e) => setShareName(e.target.value)}
-      />
-      <br />
-
-      <label htmlFor="privateKey">Private Key:</label>
-      <input
-        type="text"
-        id="privateKey"
-        value={privateKey}
-        onChange={(e) => setPrivateKey(e.target.value)}
-      />
-      <br />
-
-      <button onClick={handleSave}>Save</button>
-    </div>
+    <Modal
+      open={open}
+      onClose={onClose}
+      aria-labelledby="modal-modal-title"
+      aria-describedby="modal-modal-description"
+    >
+      <Box sx={style}>
+        <div className="flex flex-col gap-3">
+          <TextField
+            id="outlined-basic"
+            label="Enter Account Name"
+            variant="outlined"
+            value={accountName}
+            onChange={(e) => setAccountName(e.target.value)}
+            required
+            disabled={readOnly}
+          />
+          <TextField
+            id="outlined-basic"
+            label="Enter Account Key"
+            variant="outlined"
+            value={accountKey}
+            onChange={(e) => setAccountKey(e.target.value)}
+            required
+            disabled={readOnly}
+            type="password"
+          />
+          <TextField
+            id="outlined-basic"
+            label="Enter Share Name"
+            variant="outlined"
+            value={shareName}
+            onChange={(e) => setShareName(e.target.value)}
+            required
+            disabled={readOnly}
+          />
+          <TextField
+            id="outlined-basic"
+            label="Enter Private Key"
+            variant="outlined"
+            value={privateKey}
+            onChange={(e) => setPrivateKey(e.target.value)}
+            required
+            disabled={readOnly}
+            type="password"
+          />
+          {!readOnly && (
+            <Button
+              variant="contained"
+              className="flex items-center justify-center gap-2 cursor-pointer"
+              onClick={handleSave}
+              disabled={
+                !accountName || !accountKey || !shareName || !privateKey
+              }
+            >
+              Save
+            </Button>
+          )}
+        </div>
+      </Box>
+    </Modal>
   );
 };
 
