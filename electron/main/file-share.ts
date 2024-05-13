@@ -10,12 +10,7 @@ import {
   StorageSharedKeyCredential,
 } from "@azure/storage-file-share";
 
-import {
-  key,
-  chunkSeparator,
-  DATA_FORMAT_NOT_SUPPORTED,
-  chunkSize,
-} from "./utils";
+import { chunkSeparator, DATA_FORMAT_NOT_SUPPORTED, chunkSize } from "./utils";
 export const isFileOpened = async (paths: string[]): Promise<boolean> => {
   return new Promise((resolve, reject) => {
     if (process.platform === "win32") {
@@ -50,7 +45,7 @@ const convertFileToBase64 = async (filePath: string): Promise<string> => {
   );
 };
 
-const encryptFile = (fileDataUrl: string) => {
+const encryptFile = (fileDataUrl: string, key: string) => {
   const encryptedChunks = [];
   const totalChunks = Math.ceil(fileDataUrl.length / chunkSize);
 
@@ -92,7 +87,7 @@ function decryptionAES(msg: string, key: string) {
   }
 }
 
-export const decryptFile = (encryptedData: string) => {
+export const decryptFile = (encryptedData: string, key: string) => {
   const encryptedChunks = encryptedData.split(chunkSeparator);
   const decryptedChunks = [];
 
@@ -106,11 +101,15 @@ export const decryptFile = (encryptedData: string) => {
   const decryptedContent = decryptedChunks.join("");
   return decryptedContent;
 };
-export const encryptAndSaveFile = async (fromPath: string, toPath: string) => {
+export const encryptAndSaveFile = async (
+  fromPath: string,
+  toPath: string,
+  key: string
+) => {
   return new Promise<void>(async (resolve, reject) => {
     const base64Data = await convertFileToBase64(fromPath);
     const dataURL = `data:${mime.getType(toPath)};base64,${base64Data}`;
-    const encrypted = encryptFile(dataURL);
+    const encrypted = encryptFile(dataURL, key);
     fs.writeFile(toPath, encrypted, (err) => {
       if (err) {
         console.error("Error writing file:", err);

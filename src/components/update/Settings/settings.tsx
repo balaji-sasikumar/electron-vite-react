@@ -60,6 +60,7 @@ const SettingsComponent: React.FC<SettingsComponentProps> = ({
       onClose={onClose}
       aria-labelledby="modal-modal-title"
       aria-describedby="modal-modal-description"
+      hideBackdrop={true}
     >
       <Box sx={style}>
         <div className="flex flex-col gap-3">
@@ -101,18 +102,28 @@ const SettingsComponent: React.FC<SettingsComponentProps> = ({
             disabled={readOnly}
             type="password"
           />
-          {!readOnly && (
+
+          <div className="flex flex-row gap-3">
+            {!readOnly && (
+              <Button
+                variant="contained"
+                className="flex items-center justify-center gap-2 cursor-pointer"
+                onClick={handleSave}
+                disabled={
+                  !accountName || !accountKey || !shareName || !privateKey
+                }
+              >
+                Save
+              </Button>
+            )}
             <Button
-              variant="contained"
+              variant="outlined"
               className="flex items-center justify-center gap-2 cursor-pointer"
-              onClick={handleSave}
-              disabled={
-                !accountName || !accountKey || !shareName || !privateKey
-              }
+              onClick={onClose}
             >
-              Save
+              Cancel
             </Button>
-          )}
+          </div>
         </div>
       </Box>
     </Modal>

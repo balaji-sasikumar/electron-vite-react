@@ -85,7 +85,7 @@ export function fileInvocation(win: Electron.BrowserWindow) {
       let tempPath = app.getPath("temp");
       let toPath = tempPath + path.basename(selectedPath) + ".txt";
 
-      await encryptAndSaveFile(selectedPath, toPath);
+      await encryptAndSaveFile(selectedPath, toPath, configuration.privateKey);
       await uploadFile(
         path.basename(selectedPath) + ".txt",
         toPath,
@@ -135,8 +135,8 @@ export function fileInvocation(win: Electron.BrowserWindow) {
       let tempPath = app.getPath("temp");
       let fileName = file.name.split(".txt")[0];
       let newPath = tempPath + fileName;
-
-      let decrypted = decryptFile(fileData.toString());
+      let key = configuration.privateKey;
+      let decrypted = decryptFile(fileData.toString(), key);
 
       if (decrypted === DATA_FORMAT_NOT_SUPPORTED) {
         ipcEvent.sender.send(
@@ -160,7 +160,7 @@ export function fileInvocation(win: Electron.BrowserWindow) {
         let isFileOpen = await isFileOpened(paths);
         if (!isFileOpen) {
           if (isEditable) {
-            await encryptAndSaveFile(newPath, newPath + ".txt");
+            await encryptAndSaveFile(newPath, newPath + ".txt", key);
             await uploadFile(
               file.name,
               newPath + ".txt",

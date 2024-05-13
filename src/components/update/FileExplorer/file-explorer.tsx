@@ -13,7 +13,7 @@ import Modal from "@mui/material/Modal";
 import "./file-explorer.css";
 import { InvokeEvent } from "@/enums/invoke-event.enum";
 import AlertDialog from "../Dialog/dialog";
-import { IconButton } from "@mui/material";
+import { Card, CardContent, IconButton, Typography } from "@mui/material";
 import SettingsComponent from "../Settings/settings";
 interface File {
   kind: string;
@@ -200,6 +200,7 @@ const FileExplorer: React.FC<Props> = ({ files }) => {
         onClose={handleClose}
         aria-labelledby="modal-modal-title"
         aria-describedby="modal-modal-description"
+        hideBackdrop={true}
       >
         <Box sx={style}>
           <div className="flex flex-col gap-3">
@@ -236,6 +237,30 @@ const FileExplorer: React.FC<Props> = ({ files }) => {
       </Modal>
     );
   }
+
+  function NoContentsComponent() {
+    return (
+      <Card
+        variant="outlined"
+        className="my-4 flex items-center justify-center"
+      >
+        <CardContent>
+          <Typography
+            variant="h5"
+            component="h2"
+            color="textSecondary"
+            gutterBottom
+          >
+            No files or folders found in this directory.
+          </Typography>
+          <Typography variant="body1" color="textSecondary">
+            Please add some files or folders.
+          </Typography>
+        </CardContent>
+      </Card>
+    );
+  }
+
   return (
     <>
       <SettingsComponent
@@ -293,63 +318,69 @@ const FileExplorer: React.FC<Props> = ({ files }) => {
           </IconButton>
         </div>
       </div>
-      <TableContainer component={Paper}>
-        <Table stickyHeader aria-label="sticky table">
-          <TableHead>
-            <TableRow>
-              <TableCell>Name</TableCell>
-              <TableCell>Type</TableCell>
-              <TableCell>Size</TableCell>
-              <TableCell></TableCell>
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            {files.map((row: any) => (
-              <TableRow
-                key={row.name}
-                sx={{ "&:last-child td, &:last-child th": { border: 0 } }}
-              >
-                <TableCell
-                  component="th"
-                  scope="row"
-                  onClick={() => {
-                    openFile(row);
-                  }}
-                  className="cursor-pointer"
-                >
-                  <div className="flex items-center gap-2">
-                    {row.kind === "directory" ? (
-                      <span className="material-symbols-outlined material-symbols-fill text-yellow-600">
-                        folder_open
-                      </span>
-                    ) : (
-                      <span className="material-symbols-outlined material-symbols-fill text-blue-500">
-                        description
-                      </span>
-                    )}
-                    {row.kind === "file" ? row.name.split(".txt")[0] : row.name}
-                  </div>
-                </TableCell>
-                <TableCell>
-                  {row.kind.charAt(0).toUpperCase() + row.kind.slice(1)}
-                </TableCell>
-                <TableCell>
-                  {row.kind === "file" &&
-                    convertContentLength(row.properties.contentLength)}
-                </TableCell>
-                <TableCell
-                  className="cursor-pointer"
-                  onClick={() => deleteDialog(row)}
-                >
-                  <span className="material-symbols-outlined font-extralight">
-                    delete_forever
-                  </span>
-                </TableCell>
+      {files.length == 0 ? (
+        NoContentsComponent()
+      ) : (
+        <TableContainer component={Paper}>
+          <Table stickyHeader aria-label="sticky table">
+            <TableHead>
+              <TableRow>
+                <TableCell>Name</TableCell>
+                <TableCell>Type</TableCell>
+                <TableCell>Size</TableCell>
+                <TableCell></TableCell>
               </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      </TableContainer>
+            </TableHead>
+            <TableBody>
+              {files.map((row: any) => (
+                <TableRow
+                  key={row.name}
+                  sx={{ "&:last-child td, &:last-child th": { border: 0 } }}
+                >
+                  <TableCell
+                    component="th"
+                    scope="row"
+                    onClick={() => {
+                      openFile(row);
+                    }}
+                    className="cursor-pointer"
+                  >
+                    <div className="flex items-center gap-2">
+                      {row.kind === "directory" ? (
+                        <span className="material-symbols-outlined material-symbols-fill text-yellow-600">
+                          folder_open
+                        </span>
+                      ) : (
+                        <span className="material-symbols-outlined material-symbols-fill text-blue-500">
+                          description
+                        </span>
+                      )}
+                      {row.kind === "file"
+                        ? row.name.split(".txt")[0]
+                        : row.name}
+                    </div>
+                  </TableCell>
+                  <TableCell>
+                    {row.kind.charAt(0).toUpperCase() + row.kind.slice(1)}
+                  </TableCell>
+                  <TableCell>
+                    {row.kind === "file" &&
+                      convertContentLength(row.properties.contentLength)}
+                  </TableCell>
+                  <TableCell
+                    className="cursor-pointer"
+                    onClick={() => deleteDialog(row)}
+                  >
+                    <span className="material-symbols-outlined font-extralight">
+                      delete_forever
+                    </span>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </TableContainer>
+      )}
     </>
   );
 };
