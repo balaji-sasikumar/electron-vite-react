@@ -56,7 +56,7 @@ export function fileInvocation(win: Electron.BrowserWindow) {
         ipcEvent.sender.send(
           InvokeEvent.FileProcessing,
           Status.Error,
-          error.details.message ||
+          error?.details?.message ||
             "An error occurred while creating the directory"
         );
       }
@@ -77,7 +77,7 @@ export function fileInvocation(win: Electron.BrowserWindow) {
         ipcEvent.sender.send(
           InvokeEvent.FileProcessing,
           Status.Error,
-          error.details.message ||
+          error?.details?.message ||
             "An error occurred while deleting the directory"
         );
       }
@@ -128,7 +128,8 @@ export function fileInvocation(win: Electron.BrowserWindow) {
         ipcEvent.sender.send(
           InvokeEvent.FileProcessing,
           Status.Error,
-          error.details.message || "An error occurred while uploading the file"
+          error?.details?.message ||
+            "An error occurred while uploading the file"
         );
       }
     }
@@ -219,7 +220,7 @@ export function fileInvocation(win: Electron.BrowserWindow) {
         ipcEvent.sender.send(
           InvokeEvent.FileProcessing,
           Status.Error,
-          error.details.message || "An error occurred while opening the file"
+          error?.details?.message || "An error occurred while opening the file"
         );
       }
     }

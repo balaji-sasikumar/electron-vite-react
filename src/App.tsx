@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import "./App.css";
-import FileExplorer from "./components/update/FileExplorer/file-explorer";
+import FileExplorer from "./components/FileUI/FileExplorer/file-explorer";
 import { ThemeProvider, createTheme } from "@mui/material/styles";
 import CssBaseline from "@mui/material/CssBaseline";
 import { InvokeEvent } from "./enums/invoke-event.enum";
@@ -67,6 +67,7 @@ function App() {
     return () => {
       window.ipcRenderer.off(InvokeEvent.FileProcessing, () => {});
       window.ipcRenderer.off(InvokeEvent.GetFileResponse, () => {});
+      window.ipcRenderer.off(InvokeEvent.Loading, () => {});
     };
   }, []);
 
