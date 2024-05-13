@@ -27,9 +27,17 @@ export function fileInvocation(win: Electron.BrowserWindow) {
       folderName,
       fileName
     ) => {
-      configuration = JSON.parse(configuration);
-      await deleteFile(configuration, folderName, fileName);
-      ipcEvent.sender.send(InvokeEvent.TryFetch, "");
+      try {
+        configuration = JSON.parse(configuration);
+        await deleteFile(configuration, folderName, fileName);
+        ipcEvent.sender.send(InvokeEvent.TryFetch, "");
+      } catch (error: any) {
+        ipcEvent.sender.send(
+          InvokeEvent.FileProcessing,
+          Status.Error,
+          error?.details?.message || "An error occurred while deleting the file"
+        );
+      }
     }
   );
   ipcMain.handle(
@@ -40,9 +48,18 @@ export function fileInvocation(win: Electron.BrowserWindow) {
       currentDirectoryPath,
       directoryName
     ) => {
-      configuration = JSON.parse(configuration);
-      await addDirectory(configuration, currentDirectoryPath, directoryName);
-      ipcEvent.sender.send(InvokeEvent.TryFetch, "");
+      try {
+        configuration = JSON.parse(configuration);
+        await addDirectory(configuration, currentDirectoryPath, directoryName);
+        ipcEvent.sender.send(InvokeEvent.TryFetch, "");
+      } catch (error: any) {
+        ipcEvent.sender.send(
+          InvokeEvent.FileProcessing,
+          Status.Error,
+          error.details.message ||
+            "An error occurred while creating the directory"
+        );
+      }
     }
   );
   ipcMain.handle(
@@ -52,15 +69,16 @@ export function fileInvocation(win: Electron.BrowserWindow) {
       configuration,
       directoryPath
     ) => {
-      configuration = JSON.parse(configuration);
       try {
+        configuration = JSON.parse(configuration);
         await deleteDirectory(configuration, directoryPath);
         ipcEvent.sender.send(InvokeEvent.TryFetch, "");
       } catch (error: any) {
         ipcEvent.sender.send(
           InvokeEvent.FileProcessing,
           Status.Error,
-          error.details.message
+          error.details.message ||
+            "An error occurred while deleting the directory"
         );
       }
     }
@@ -73,32 +91,46 @@ export function fileInvocation(win: Electron.BrowserWindow) {
       configuration,
       directories
     ) => {
-      let filePaths = await dialog.showOpenDialog({
-        properties: ["openFile"],
-      });
-      if (filePaths.canceled) {
-        return "canceled";
+      try {
+        let filePaths = await dialog.showOpenDialog({
+          properties: ["openFile"],
+        });
+        if (filePaths.canceled) {
+          return "canceled";
+        }
+        configuration = JSON.parse(configuration);
+
+        let selectedPath = filePaths.filePaths[0];
+        let tempPath = app.getPath("temp");
+        let toPath = tempPath + path.basename(selectedPath) + ".txt";
+        ipcEvent.sender.send(InvokeEvent.Loading, true);
+        await encryptAndSaveFile(
+          selectedPath,
+          toPath,
+          configuration.privateKey
+        );
+        await uploadFile(
+          path.basename(selectedPath) + ".txt",
+          toPath,
+          configuration,
+          directories
+        );
+        removeFileFromTempPath(toPath);
+        ipcEvent.sender.send(InvokeEvent.Loading, false);
+        ipcEvent.sender.send(InvokeEvent.TryFetch, "");
+        ipcEvent.sender.send(
+          InvokeEvent.FileProcessing,
+          Status.Success,
+          `The file ${path.basename(selectedPath)} is uploaded successfully`
+        );
+      } catch (error: any) {
+        ipcEvent.sender.send(InvokeEvent.Loading, false);
+        ipcEvent.sender.send(
+          InvokeEvent.FileProcessing,
+          Status.Error,
+          error.details.message || "An error occurred while uploading the file"
+        );
       }
-      configuration = JSON.parse(configuration);
-
-      let selectedPath = filePaths.filePaths[0];
-      let tempPath = app.getPath("temp");
-      let toPath = tempPath + path.basename(selectedPath) + ".txt";
-
-      await encryptAndSaveFile(selectedPath, toPath, configuration.privateKey);
-      await uploadFile(
-        path.basename(selectedPath) + ".txt",
-        toPath,
-        configuration,
-        directories
-      );
-      removeFileFromTempPath(toPath);
-      ipcEvent.sender.send(InvokeEvent.TryFetch, "");
-      ipcEvent.sender.send(
-        InvokeEvent.FileProcessing,
-        Status.Success,
-        `The file ${path.basename(selectedPath)} is uploaded successfully`
-      );
     }
   );
   ipcMain.handle(
@@ -121,64 +153,81 @@ export function fileInvocation(win: Electron.BrowserWindow) {
       configuration,
       directories
     ) => {
-      let isEditable = true;
-      configuration = JSON.parse(configuration);
-      if (!file.name.endsWith(".txt")) {
-        ipcEvent.sender.send(
-          InvokeEvent.FileProcessing,
-          Status.Error,
-          `The file ${file.name} is not supported`
-        );
-        return;
-      }
-      let fileData = await downloadFile(file, configuration, directories);
-      let tempPath = app.getPath("temp");
-      let fileName = file.name.split(".txt")[0];
-      let newPath = tempPath + fileName;
-      let key = configuration.privateKey;
-      let decrypted = decryptFile(fileData.toString(), key);
-
-      if (decrypted === DATA_FORMAT_NOT_SUPPORTED) {
-        ipcEvent.sender.send(
-          InvokeEvent.FileProcessing,
-          Status.Error,
-          `The file ${fileName} is not supported`
-        );
-        return;
-      }
-      const base64Data = decrypted.split(",")[1];
-
-      openFile(tempPath, newPath, base64Data);
-      const actualExt = file.name
-        .split(".")
-        [file.name.split(".").length - 2].toLowerCase();
-      isEditable = !readOnlyExtensions.includes(actualExt);
-
-      let paths = [newPath];
-      let intervalId: NodeJS.Timeout;
-      intervalId = setInterval(async () => {
-        let isFileOpen = await isFileOpened(paths);
-        if (!isFileOpen) {
-          if (isEditable) {
-            await encryptAndSaveFile(newPath, newPath + ".txt", key);
-            await uploadFile(
-              file.name,
-              newPath + ".txt",
-              configuration,
-              directories
-            );
-            removeFileFromTempPath(newPath + ".txt");
-          }
-
-          removeFileFromTempPath(newPath);
-          clearInterval(intervalId!);
+      try {
+        ipcEvent.sender.send(InvokeEvent.Loading, true);
+        let isEditable = true;
+        configuration = JSON.parse(configuration);
+        if (!file.name.endsWith(".txt")) {
           ipcEvent.sender.send(
             InvokeEvent.FileProcessing,
-            Status.Success,
-            `The file ${fileName} is processed successfully`
+            Status.Error,
+            `The file ${file.name} is not supported`
           );
+          return;
         }
-      }, 5000);
+        let fileData = await downloadFile(file, configuration, directories);
+        let tempPath = app.getPath("temp");
+        let fileName = file.name.split(".txt")[0];
+        let newPath = tempPath + fileName;
+        let key = configuration.privateKey;
+        let decrypted = decryptFile(fileData.toString(), key);
+
+        if (decrypted === DATA_FORMAT_NOT_SUPPORTED) {
+          ipcEvent.sender.send(InvokeEvent.Loading, false);
+          ipcEvent.sender.send(
+            InvokeEvent.FileProcessing,
+            Status.Error,
+            `The file ${fileName} is not supported`
+          );
+          return;
+        }
+        const base64Data = decrypted.split(",")[1];
+
+        openFile(tempPath, newPath, base64Data);
+        ipcEvent.sender.send(InvokeEvent.Loading, false);
+        const actualExt = file.name
+          .split(".")
+          [file.name.split(".").length - 2].toLowerCase();
+        isEditable = !readOnlyExtensions.includes(actualExt);
+
+        let paths = [newPath];
+        let intervalId: NodeJS.Timeout;
+        intervalId = setInterval(async () => {
+          let isFileOpen = await isFileOpened(paths);
+          if (!isFileOpen) {
+            if (isEditable) {
+              await encryptAndSaveFile(newPath, newPath + ".txt", key);
+              await uploadFile(
+                file.name,
+                newPath + ".txt",
+                configuration,
+                directories
+              );
+              removeFileFromTempPath(newPath + ".txt");
+            }
+
+            removeFileFromTempPath(newPath);
+            clearInterval(intervalId!);
+            ipcEvent.sender.send(
+              InvokeEvent.FileProcessing,
+              Status.Success,
+              `The file ${fileName} is processed successfully`
+            );
+          }
+        }, 5000);
+      } catch (error: any) {
+        ipcEvent.sender.send(
+          InvokeEvent.FileProcessing,
+          Status.Error,
+          error.details.message || "An error occurred while opening the file"
+        );
+      }
+    }
+  );
+  ipcMain.handle(
+    InvokeEvent.Loading,
+    async (ipcEvent: Electron.IpcMainInvokeEvent, loading) => {
+      ipcEvent.sender.send(InvokeEvent.Loading, loading);
     }
   );
 }

@@ -5,7 +5,7 @@ import { ThemeProvider, createTheme } from "@mui/material/styles";
 import CssBaseline from "@mui/material/CssBaseline";
 import { InvokeEvent } from "./enums/invoke-event.enum";
 import Snackbar from "@mui/material/Snackbar";
-import { Alert, Slide, SlideProps } from "@mui/material";
+import { Alert, Box, LinearProgress, Slide, SlideProps } from "@mui/material";
 const darkTheme = createTheme({
   palette: {
     mode: "dark",
@@ -28,6 +28,7 @@ function App() {
     "success" | "info" | "warning" | "error" | undefined
   >("info");
   const [snackBarOpen, setSnackBarOpen] = useState<boolean>(false);
+  const [loading, setLoading] = useState<boolean>(false);
 
   useEffect(() => {
     (async () => {
@@ -54,6 +55,10 @@ function App() {
         }
       );
 
+      window.ipcRenderer.on(InvokeEvent.Loading, (event, loading) => {
+        setLoading(loading);
+      });
+
       window.ipcRenderer.on(InvokeEvent.GetFileResponse, (event, file) => {
         setFiles(file);
       });
@@ -69,6 +74,11 @@ function App() {
     <>
       <ThemeProvider theme={darkTheme}>
         <CssBaseline />
+        {loading && (
+          <Box sx={{ width: "100%", margin: "1em 0" }}>
+            <LinearProgress />
+          </Box>
+        )}
         <Snackbar
           open={snackBarOpen}
           onClose={() => setSnackBarOpen(false)}
