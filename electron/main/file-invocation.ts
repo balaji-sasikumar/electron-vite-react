@@ -187,9 +187,7 @@ export function fileInvocation(win: Electron.BrowserWindow) {
 
         openFile(tempPath, newPath, base64Data);
         ipcEvent.sender.send(InvokeEvent.Loading, false);
-        const actualExt = file.name
-          .split(".")
-          [file.name.split(".").length - 2].toLowerCase();
+        const actualExt = file.name.split(".")[1].toLowerCase();
         isEditable = !readOnlyExtensions.includes(actualExt);
 
         let paths = [newPath];

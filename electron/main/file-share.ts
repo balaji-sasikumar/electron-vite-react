@@ -231,6 +231,7 @@ export const uploadFile = async (
   );
   const shareClient = serviceClient.getShareClient(shareName);
   const directoryClient = shareClient.getDirectoryClient(directoryName);
+  fileName = fileName.endsWith(".gz") ? fileName : `${fileName}.gz`;
   const fileClient = directoryClient.getFileClient(fileName);
   const compressedFilePath = `${filePath}.gz`;
   await compressFile(filePath, compressedFilePath);
