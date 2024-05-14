@@ -25,6 +25,10 @@ export const isFileOpened = async (paths: string[]): Promise<boolean> => {
         }
       );
     } else {
+      console.log(
+        "Checking if file is opened on non-Windows platform",
+        `lsof -F n -- "${paths[0]}"`
+      );
       exec(`lsof -F n -- "${paths[0]}"`, (error, stdout, stderr) => {
         if (error || stderr) {
           resolve(false);
@@ -127,6 +131,7 @@ export const openFile = (
   base64Data: string
 ) => {
   fs.mkdir(tempPath, { recursive: true }, (err) => {
+    console.log("Creating directory:", tempPath, newPath);
     if (err) {
       console.error("Error creating directory:", err);
       return;

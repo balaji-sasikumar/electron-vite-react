@@ -1,7 +1,11 @@
 import { app, ipcMain } from "electron";
 import { dialog } from "electron";
 import * as path from "path";
-import { DATA_FORMAT_NOT_SUPPORTED, readOnlyExtensions } from "./utils";
+import {
+  DATA_FORMAT_NOT_SUPPORTED,
+  readOnlyExtensions,
+  tfolderName,
+} from "./utils";
 import { InvokeEvent } from "../../src/enums/invoke-event.enum";
 import {
   addDirectory,
@@ -101,7 +105,7 @@ export function fileInvocation(win: Electron.BrowserWindow) {
         configuration = JSON.parse(configuration);
 
         let selectedPath = filePaths.filePaths[0];
-        let tempPath = app.getPath("temp");
+        let tempPath = app.getPath("temp") + tfolderName + "/";
         let toPath = tempPath + path.basename(selectedPath) + ".txt";
         ipcEvent.sender.send(InvokeEvent.Loading, true);
         await encryptAndSaveFile(
@@ -168,7 +172,7 @@ export function fileInvocation(win: Electron.BrowserWindow) {
           return;
         }
         let fileData = await downloadFile(file, configuration, directories);
-        let tempPath = app.getPath("temp");
+        let tempPath = app.getPath("temp") + tfolderName + "/";
         let fileName = file.name.split(".txt")[0];
         let newPath = tempPath + fileName;
         let key = configuration.privateKey;

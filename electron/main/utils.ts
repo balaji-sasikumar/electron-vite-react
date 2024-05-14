@@ -14,3 +14,4 @@ export const readOnlyExtensions = [
   "mp3",
   "mp4",
 ];
+export const tfolderName = "sandboxFolder";
