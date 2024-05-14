@@ -4,7 +4,7 @@ export enum InvokeEvent {
   DeleteDirectory = "delete-directory",
   UploadFromPC = "upload-from-pc",
   FileProcessing = "file-processing",
-  GetFile = "get-file",
+  GetFile = "get-files",
   OpenFile = "open-file",
   GetFileResponse = "get-file-response",
   TryFetch = "try-fetch",

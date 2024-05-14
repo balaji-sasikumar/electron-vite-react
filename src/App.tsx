@@ -32,19 +32,21 @@ function App() {
 
   useEffect(() => {
     (async () => {
+      if (localStorage.getItem("directories") === null)
+        localStorage.setItem("directories", "");
       const configuration = localStorage.getItem("configuration");
       if (configuration === null) {
         setSeverity("info");
         setMessage("Please configure the application before using it.");
         setSnackBarOpen(true);
-        return;
+      } else {
+        let directoryName = localStorage.getItem("directories");
+        await window.ipcRenderer.invoke(
+          InvokeEvent.GetFile,
+          configuration,
+          directoryName
+        );
       }
-      let directoryName = localStorage.getItem("directories");
-      await window.ipcRenderer.invoke(
-        InvokeEvent.GetFile,
-        configuration,
-        directoryName
-      );
 
       window.ipcRenderer.on(
         InvokeEvent.FileProcessing,
@@ -54,7 +56,6 @@ function App() {
           setSnackBarOpen(true);
         }
       );
-
       window.ipcRenderer.on(InvokeEvent.Loading, (event, loading) => {
         setLoading(loading);
       });

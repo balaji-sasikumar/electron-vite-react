@@ -73,7 +73,7 @@ const FileExplorer: React.FC<Props> = ({ files }) => {
   }, []);
 
   const refresh = async () => {
-    const configuration = localStorage.getItem("configuration");
+    const configuration = getConfigurations();
     let directories = localStorage.getItem("directories") || "";
     await window.ipcRenderer.invoke(
       InvokeEvent.GetFile,
@@ -93,7 +93,7 @@ const FileExplorer: React.FC<Props> = ({ files }) => {
   };
 
   const createFolder = async () => {
-    const configuration = localStorage.getItem("configuration");
+    const configuration = getConfigurations();
     let directories = localStorage.getItem("directories") || "";
     await window.ipcRenderer.invoke(
       InvokeEvent.CreateDirectory,
@@ -105,7 +105,7 @@ const FileExplorer: React.FC<Props> = ({ files }) => {
   };
 
   const openFile = async (file: any) => {
-    const configuration = localStorage.getItem("configuration");
+    const configuration = getConfigurations();
     let directories = localStorage.getItem("directories") || "";
 
     if (file.kind === "directory") {
@@ -151,7 +151,7 @@ const FileExplorer: React.FC<Props> = ({ files }) => {
   };
 
   const deleteFile = async (file: any) => {
-    const configuration = localStorage.getItem("configuration");
+    const configuration = getConfigurations();
     let directories = localStorage.getItem("directories") || "";
     let directoryPath = directories;
     if (directoryPath) {
@@ -175,7 +175,7 @@ const FileExplorer: React.FC<Props> = ({ files }) => {
   };
 
   const uploadFile = async () => {
-    const configuration = localStorage.getItem("configuration");
+    const configuration = getConfigurations();
     let directories = localStorage.getItem("directories") || "";
     await window.ipcRenderer.invoke(
       InvokeEvent.UploadFromPC,
@@ -260,6 +260,7 @@ const FileExplorer: React.FC<Props> = ({ files }) => {
       </Card>
     );
   }
+  const getConfigurations = () => localStorage.getItem("configuration");
 
   return (
     <>
