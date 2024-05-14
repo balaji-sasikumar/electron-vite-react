@@ -110,7 +110,7 @@ export function fileInvocation(win: Electron.BrowserWindow) {
           configuration.privateKey
         );
         await uploadFile(
-          path.basename(selectedPath) + ".txt",
+          path.basename(selectedPath) + ".txt.gz",
           toPath,
           configuration,
           directories
@@ -158,12 +158,13 @@ export function fileInvocation(win: Electron.BrowserWindow) {
         ipcEvent.sender.send(InvokeEvent.Loading, true);
         let isEditable = true;
         configuration = JSON.parse(configuration);
-        if (!file.name.endsWith(".txt")) {
+        if (!file.name.endsWith(".txt") && !file.name.endsWith(".gz")) {
           ipcEvent.sender.send(
             InvokeEvent.FileProcessing,
             Status.Error,
             `The file ${file.name} is not supported`
           );
+          ipcEvent.sender.send(InvokeEvent.Loading, false);
           return;
         }
         let fileData = await downloadFile(file, configuration, directories);
@@ -217,6 +218,7 @@ export function fileInvocation(win: Electron.BrowserWindow) {
           }
         }, 5000);
       } catch (error: any) {
+        ipcEvent.sender.send(InvokeEvent.Loading, false);
         ipcEvent.sender.send(
           InvokeEvent.FileProcessing,
           Status.Error,

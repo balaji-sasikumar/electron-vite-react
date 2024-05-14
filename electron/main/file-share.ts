@@ -9,8 +9,9 @@ import {
   ShareServiceClient,
   StorageSharedKeyCredential,
 } from "@azure/storage-file-share";
-
 import { chunkSeparator, DATA_FORMAT_NOT_SUPPORTED, chunkSize } from "./utils";
+import * as zlib from "zlib";
+
 export const isFileOpened = async (paths: string[]): Promise<boolean> => {
   return new Promise((resolve, reject) => {
     if (process.platform === "win32") {
@@ -183,6 +184,14 @@ export const downloadFile = async (
   const directoryClient = shareClient.getDirectoryClient(directoryName);
   const fileClient = directoryClient.getFileClient(file.name);
   const downloadResponse = await fileClient.download();
+  const isCompressed = file.name.endsWith(".gz");
+  if (isCompressed) {
+    const decompressedContent = await decompressStream(
+      downloadResponse.readableStreamBody!
+    );
+    return decompressedContent.toString();
+  }
+
   const downloadedContent = await streamToBuffer(
     downloadResponse.readableStreamBody
   );
@@ -223,7 +232,10 @@ export const uploadFile = async (
   const shareClient = serviceClient.getShareClient(shareName);
   const directoryClient = shareClient.getDirectoryClient(directoryName);
   const fileClient = directoryClient.getFileClient(fileName);
-  await fileClient.uploadFile(filePath);
+  const compressedFilePath = `${filePath}.gz`;
+  await compressFile(filePath, compressedFilePath);
+  await fileClient.uploadFile(compressedFilePath);
+  fs.unlinkSync(compressedFilePath);
 };
 
 export const deleteFile = async (
@@ -283,3 +295,48 @@ export const removeFileFromTempPath = (filePath: string) => {
     console.log("File removed from temp successfully");
   });
 };
+
+async function compressFile(
+  inputFilePath: string,
+  outputFilePath: string
+): Promise<void> {
+  return new Promise((resolve, reject) => {
+    const readStream = fs.createReadStream(inputFilePath);
+    const writeStream = fs.createWriteStream(outputFilePath);
+    const gzip = zlib.createGzip();
+
+    readStream.pipe(gzip).pipe(writeStream);
+
+    writeStream.on("finish", () => {
+      resolve();
+    });
+
+    writeStream.on("error", (err) => {
+      reject(err);
+    });
+  });
+}
+
+async function decompressStream(
+  readableStream: NodeJS.ReadableStream
+): Promise<Buffer> {
+  return new Promise((resolve, reject) => {
+    const chunks: Buffer[] = [];
+
+    const gunzip = zlib.createGunzip();
+
+    readableStream.pipe(gunzip);
+
+    gunzip.on("data", (chunk: Buffer) => {
+      chunks.push(chunk);
+    });
+
+    gunzip.on("end", () => {
+      resolve(Buffer.concat(chunks));
+    });
+
+    gunzip.on("error", (error: Error) => {
+      reject(error);
+    });
+  });
+}
