@@ -1,11 +1,7 @@
 import { app, ipcMain } from "electron";
 import { dialog } from "electron";
 import * as path from "path";
-import {
-  DATA_FORMAT_NOT_SUPPORTED,
-  readOnlyExtensions,
-  tfolderName,
-} from "./utils";
+import { DATA_FORMAT_NOT_SUPPORTED, readOnlyExtensions } from "./utils";
 import { InvokeEvent } from "../../src/enums/invoke-event.enum";
 import {
   addDirectory,
@@ -107,7 +103,7 @@ export function fileInvocation(win: Electron.BrowserWindow) {
         let selectedPath = filePaths.filePaths[0];
         let isWin = process.platform === "win32";
         let sep = isWin ? "\\" : "/";
-        let tempPath = app.getPath("temp") + tfolderName + sep;
+        let tempPath = app.getPath("temp") + sep;
 
         let toPath = tempPath + path.basename(selectedPath) + ".txt";
         ipcEvent.sender.send(InvokeEvent.Loading, true);
@@ -177,7 +173,7 @@ export function fileInvocation(win: Electron.BrowserWindow) {
         let fileData = await downloadFile(file, configuration, directories);
         let isWin = process.platform === "win32";
         let sep = isWin ? "\\" : "/";
-        let tempPath = app.getPath("temp") + tfolderName + sep;
+        let tempPath = app.getPath("temp") + sep;
         let fileName = file.name.split(".txt")[0];
         let newPath = tempPath + fileName;
         let key = configuration.privateKey;
