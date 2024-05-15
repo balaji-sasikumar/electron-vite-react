@@ -105,7 +105,10 @@ export function fileInvocation(win: Electron.BrowserWindow) {
         configuration = JSON.parse(configuration);
 
         let selectedPath = filePaths.filePaths[0];
-        let tempPath = app.getPath("temp") + tfolderName + "/";
+        let isWin = process.platform === "win32";
+        let sep = isWin ? "\\" : "/";
+        let tempPath = app.getPath("temp") + tfolderName + sep;
+
         let toPath = tempPath + path.basename(selectedPath) + ".txt";
         ipcEvent.sender.send(InvokeEvent.Loading, true);
         await encryptAndSaveFile(
@@ -172,7 +175,9 @@ export function fileInvocation(win: Electron.BrowserWindow) {
           return;
         }
         let fileData = await downloadFile(file, configuration, directories);
-        let tempPath = app.getPath("temp") + tfolderName + "/";
+        let isWin = process.platform === "win32";
+        let sep = isWin ? "\\" : "/";
+        let tempPath = app.getPath("temp") + tfolderName + sep;
         let fileName = file.name.split(".txt")[0];
         let newPath = tempPath + fileName;
         let key = configuration.privateKey;
