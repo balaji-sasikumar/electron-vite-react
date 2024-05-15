@@ -1,10 +1,6 @@
 #root {
-  padding: 2rem;
+  padding: 0 1rem;
   width: 100%;
-}
-
-.read-the-docs {
-  color: #888;
 }
 
 .flex-center,

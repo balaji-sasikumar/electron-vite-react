@@ -280,7 +280,7 @@ const FileExplorer: React.FC<Props> = ({ files }) => {
         okText="Delete"
       />
       {CreateFolderModal()}
-      <div className="flex my-3">
+      <div className="flex my-3 sticky top-0 p-2 bg-white z-10">
         {currentDirectory && (
           <span
             className="material-symbols-outlined  cursor-pointer"

@@ -6,9 +6,9 @@ import CssBaseline from "@mui/material/CssBaseline";
 import { InvokeEvent } from "./enums/invoke-event.enum";
 import Snackbar from "@mui/material/Snackbar";
 import { Alert, Box, LinearProgress, Slide, SlideProps } from "@mui/material";
-const darkTheme = createTheme({
+const lightTheme = createTheme({
   palette: {
-    mode: "dark",
+    mode: "light",
   },
 });
 interface File {
@@ -74,7 +74,7 @@ function App() {
 
   return (
     <>
-      <ThemeProvider theme={darkTheme}>
+      <ThemeProvider theme={lightTheme}>
         <CssBaseline />
         {loading && (
           <Box sx={{ width: "100%", margin: "1em 0" }}>
