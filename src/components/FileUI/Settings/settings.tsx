@@ -30,17 +30,6 @@ const SettingsComponent: React.FC<SettingsComponentProps> = ({
   const [shareName, setShareName] = useState<string>("");
   const [privateKey, setPrivateKey] = useState<string>("");
   const [readOnly, setReadOnly] = useState<boolean>(false);
-  useEffect(() => {
-    const configuration = localStorage.getItem("configuration");
-    if (configuration) {
-      const config = JSON.parse(configuration);
-      setAccountName(config.accountName);
-      setAccountKey(config.accountKey);
-      setShareName(config.shareName);
-      setPrivateKey(config.privateKey);
-      setReadOnly(true);
-    }
-  }, []);
 
   const handleSave = () => {
     const storageData = {
@@ -61,6 +50,7 @@ const SettingsComponent: React.FC<SettingsComponentProps> = ({
       aria-labelledby="modal-modal-title"
       aria-describedby="modal-modal-description"
       hideBackdrop={true}
+      style={{ backdropFilter: "blur(5px)" }}
     >
       <Box sx={style}>
         <div className="flex flex-col gap-3">

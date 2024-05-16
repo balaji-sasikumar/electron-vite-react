@@ -201,6 +201,7 @@ const FileExplorer: React.FC<Props> = ({ files }) => {
         aria-labelledby="modal-modal-title"
         aria-describedby="modal-modal-description"
         hideBackdrop={true}
+        style={{ backdropFilter: "blur(5px)" }}
       >
         <Box sx={style}>
           <div className="flex flex-col gap-3">
@@ -309,14 +310,16 @@ const FileExplorer: React.FC<Props> = ({ files }) => {
             <span className="material-symbols-outlined">upload_file</span>
             Upload File
           </Button>
-          <IconButton
+          <Button
             onClick={() => {
+              localStorage.removeItem("configuration");
               setSettingsModalOpen(true);
             }}
             className="flex-1"
           >
             <span className="material-symbols-outlined">more_vert</span>
-          </IconButton>
+            Clear and Configure
+          </Button>
         </div>
       </div>
       {files.length == 0 ? (
