@@ -312,7 +312,7 @@ const FileExplorer: React.FC<Props> = ({ files }) => {
           </Button>
           <Button
             onClick={() => {
-              localStorage.removeItem("configuration");
+              localStorage.clear();
               setSettingsModalOpen(true);
             }}
             className="flex-1"
