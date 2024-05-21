@@ -1,13 +1,4 @@
 import { ipcRenderer, contextBridge } from "electron";
-// import { Dirent } from "original-fs";
-// import fs from "fs";
-
-// const api = {
-//   readdirS: async (path: string): Promise<Dirent[]> =>
-//     fs.readdirSync(path, { encoding: "utf-8", withFileTypes: true }),
-//   isDirectory: (path: string): boolean => fs.lstatSync(path).isDirectory(),
-// };
-// --------- Expose some API to the Renderer process ---------
 contextBridge.exposeInMainWorld("ipcRenderer", {
   on(...args: Parameters<typeof ipcRenderer.on>) {
     const [channel, listener] = args;
@@ -25,13 +16,17 @@ contextBridge.exposeInMainWorld("ipcRenderer", {
     const [channel, ...omit] = args;
     ipcRenderer.invoke(channel, ...omit);
   },
-
-  // You can expose other APTs you need here.
-  // ...
 });
-// contextBridge.exposeInMainWorld("api", api);
-
-// --------- Preload scripts loading ---------
+contextBridge.exposeInMainWorld("electron", {
+  sendOnlineStatus: () => {
+    ipcRenderer.send("online-status", navigator.onLine);
+  },
+  onOnlineStatusChange: (callback: (online: boolean) => void) => {
+    ipcRenderer.on("online-status-changed", (event, online) =>
+      callback(online)
+    );
+  },
+});
 function domReady(
   condition: DocumentReadyState[] = ["complete", "interactive"]
 ) {
@@ -60,13 +55,6 @@ const safeDOM = {
     }
   },
 };
-
-/**
- * https://tobiasahlin.com/spinkit
- * https://connoratherton.com/loaders
- * https://projects.lukehaas.me/css-loaders
- * https://matejkustec.github.io/SpinThatShit
- */
 function useLoading() {
   const className = `loaders-css__square-spin`;
   const styleContent = `
@@ -114,9 +102,6 @@ function useLoading() {
     },
   };
 }
-
-// ----------------------------------------------------------------------
-
 const { appendLoading, removeLoading } = useLoading();
 domReady().then(appendLoading);
 

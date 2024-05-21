@@ -18,7 +18,7 @@ import {
   uploadFile,
 } from "./file-share";
 import { Status } from "../../src/enums/status.enum";
-
+let onlineStatus: boolean;
 const deleteFileHandler = async (
   ipcEvent: Electron.IpcMainInvokeEvent,
   configuration: any,
@@ -176,7 +176,7 @@ const openFileInvocation = async (
       if (!isFileOpen) {
         if (isEditable) {
           ipcEvent.sender.send(InvokeEvent.Loading, true);
-          if (!navigator.onLine) {
+          if (!onlineStatus) {
             ipcEvent.sender.send(InvokeEvent.Loading, false);
             ipcEvent.sender.send(
               InvokeEvent.FileProcessing,
@@ -217,6 +217,9 @@ const loadingHandler = async (
   ipcEvent.sender.send(InvokeEvent.Loading, loading);
 };
 export function fileInvocation(win: Electron.BrowserWindow) {
+  ipcMain.on("online-status", (event, status) => {
+    onlineStatus = status;
+  });
   ipcMain.handle(InvokeEvent.DeleteFile, deleteFileHandler);
   ipcMain.handle(InvokeEvent.CreateDirectory, createDirectoryHandler);
   ipcMain.handle(InvokeEvent.DeleteDirectory, deleteDirectoryHandler);

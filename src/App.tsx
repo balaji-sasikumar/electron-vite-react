@@ -29,15 +29,20 @@ function App() {
   >("info");
   const [snackBarOpen, setSnackBarOpen] = useState<boolean>(false);
   const [loading, setLoading] = useState<boolean>(false);
-
+  const sendOnlineStatus = () => {
+    window.electron.sendOnlineStatus();
+  };
   useEffect(() => {
+    sendOnlineStatus();
     const handleOffline = () => {
       setSeverity("error");
       setMessage("You are offline. Please check your internet connection.");
       setSnackBarOpen(true);
       setFiles([]);
+      sendOnlineStatus();
     };
     const handleOnline = () => {
+      sendOnlineStatus();
       window.location.reload();
     };
 
