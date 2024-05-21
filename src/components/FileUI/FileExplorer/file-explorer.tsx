@@ -406,7 +406,7 @@ const FileExplorer: React.FC<Props> = ({ files }) => {
                         </span>
                       )}
                       {row.kind === "file"
-                        ? row.name.split(".txt")[0]
+                        ? row.name.split(".txt")?.[0]
                         : row.name}
                     </div>
                   </TableCell>
