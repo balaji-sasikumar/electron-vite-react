@@ -138,7 +138,7 @@ export function fileInvocation(win: Electron.BrowserWindow) {
     }
   );
   ipcMain.handle(
-    InvokeEvent.GetFile,
+    InvokeEvent.GetFiles,
     async (
       ipcEvent: Electron.IpcMainInvokeEvent,
       configuration,

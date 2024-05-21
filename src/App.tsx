@@ -31,7 +31,25 @@ function App() {
   const [loading, setLoading] = useState<boolean>(false);
 
   useEffect(() => {
+    const handleOffline = () => {
+      setSeverity("error");
+      setMessage("You are offline. Please check your internet connection.");
+      setSnackBarOpen(true);
+      setFiles([]);
+    };
+    const handleOnline = () => {
+      window.location.reload();
+    };
+
+    window.addEventListener("offline", handleOffline);
+    window.addEventListener("online", handleOnline);
+
     (async () => {
+      if (!navigator.onLine) {
+        handleOffline();
+        return;
+      }
+
       if (localStorage.getItem("directories") === null)
         localStorage.setItem("directories", "");
       const configuration = localStorage.getItem("configuration");
@@ -42,7 +60,7 @@ function App() {
       } else {
         let directoryName = localStorage.getItem("directories");
         await window.ipcRenderer.invoke(
-          InvokeEvent.GetFile,
+          InvokeEvent.GetFiles,
           configuration,
           directoryName
         );
@@ -69,6 +87,8 @@ function App() {
       window.ipcRenderer.off(InvokeEvent.FileProcessing, () => {});
       window.ipcRenderer.off(InvokeEvent.GetFileResponse, () => {});
       window.ipcRenderer.off(InvokeEvent.Loading, () => {});
+      window.removeEventListener("offline", handleOffline);
+      window.removeEventListener("online", handleOnline);
     };
   }, []);
 
@@ -84,7 +104,6 @@ function App() {
         <Snackbar
           open={snackBarOpen}
           onClose={() => setSnackBarOpen(false)}
-          autoHideDuration={5000}
           TransitionComponent={SlideTransition}
         >
           <Alert

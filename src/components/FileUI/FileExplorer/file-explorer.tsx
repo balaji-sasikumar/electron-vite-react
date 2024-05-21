@@ -44,6 +44,7 @@ const FileExplorer: React.FC<Props> = ({ files }) => {
   const [folderName, setFolderName] = React.useState("");
 
   const [settingsModalOpen, setSettingsModalOpen] = React.useState(false);
+  const [showOptions, setShowOptions] = useState<boolean>(navigator.onLine);
 
   const [message, setMessage] = useState("");
   const [title, setTitle] = useState("");
@@ -63,6 +64,7 @@ const FileExplorer: React.FC<Props> = ({ files }) => {
     setDirectoryModalOpen(false);
   };
   useEffect(() => {
+    setShowOptions(navigator.onLine);
     window.ipcRenderer.on(InvokeEvent.TryFetch, async (event) => {
       refresh();
     });
@@ -70,13 +72,13 @@ const FileExplorer: React.FC<Props> = ({ files }) => {
     return () => {
       window.ipcRenderer.off(InvokeEvent.TryFetch, () => {});
     };
-  }, []);
+  }, [files]);
 
   const refresh = async () => {
     const configuration = getConfigurations();
     let directories = localStorage.getItem("directories") || "";
     await window.ipcRenderer.invoke(
-      InvokeEvent.GetFile,
+      InvokeEvent.GetFiles,
       configuration,
       directories
     );
@@ -116,7 +118,7 @@ const FileExplorer: React.FC<Props> = ({ files }) => {
       setCurrentDirectory(file.name);
       localStorage.setItem("directories", directories);
       await window.ipcRenderer.invoke(
-        InvokeEvent.GetFile,
+        InvokeEvent.GetFiles,
         configuration,
         directories
       );
@@ -282,22 +284,26 @@ const FileExplorer: React.FC<Props> = ({ files }) => {
       />
       {CreateFolderModal()}
       <div className="flex my-3 sticky top-0 p-2 bg-white z-10">
-        {currentDirectory && (
-          <span
-            className="material-symbols-outlined  cursor-pointer"
-            onClick={() => {
-              goBack();
-            }}
-          >
-            chevron_left
-          </span>
-        )}
-        <span className="folder">{currentDirectory || "Home"}</span>
+        <div className="flex items-center justify-center">
+          {currentDirectory && (
+            <IconButton
+              className="material-symbols-outlined  cursor-pointer"
+              onClick={() => {
+                goBack();
+              }}
+              disabled={!showOptions}
+            >
+              chevron_left
+            </IconButton>
+          )}
+          <span className="folder">{currentDirectory || "Home"}</span>
+        </div>
         <div className="ml-auto flex justify-end gap-3">
           <Button
             variant="outlined"
             className="new-folder flex items-center justify-center gap-2 cursor-pointer"
             onClick={handleOpen}
+            disabled={!showOptions}
           >
             <span className="material-symbols-outlined">create_new_folder</span>
             Add Folder
@@ -306,6 +312,7 @@ const FileExplorer: React.FC<Props> = ({ files }) => {
             variant="contained"
             className="flex items-center justify-center gap-2 cursor-pointer"
             onClick={uploadFile}
+            disabled={!showOptions}
           >
             <span className="material-symbols-outlined">upload_file</span>
             Upload File
@@ -316,6 +323,8 @@ const FileExplorer: React.FC<Props> = ({ files }) => {
               setSettingsModalOpen(true);
             }}
             className="flex-1"
+            disabled={!showOptions}
+            variant="outlined"
           >
             <span className="material-symbols-outlined">more_vert</span>
             Clear and Configure
