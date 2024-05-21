@@ -1,9 +1,9 @@
 {
-  "name": "file-encryptor",
-  "version": "2.2.0",
+  "name": "file-explorer",
+  "version": "1.0.0",
   "main": "dist-electron/main/index.js",
-  "description": "A simple file encryptor and decryptor using AES-256-CBC encryption algorithm.",
-  "author": "balaji",
+  "description": "A file explorer built with electron and react",
+  "author": "",
   "private": true,
   "debug": {
     "env": {
