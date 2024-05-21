@@ -291,7 +291,7 @@ const FileExplorer: React.FC<Props> = ({ files }) => {
         okText="Delete"
       />
       {CreateFolderModal()}
-      <div className="flex my-3 sticky top-0 p-2 bg-white z-10">
+      <div className="flex my-3 sticky top-0 px-2 py-4 bg-white z-10 shadow-md">
         <div className="flex items-center justify-center">
           {currentDirectory && (
             <IconButton
@@ -354,7 +354,9 @@ const FileExplorer: React.FC<Props> = ({ files }) => {
                 window.location.reload();
                 setAnchorEl(null);
               }}
+              className="flex items-center gap-2"
             >
+              <span className="material-symbols-outlined">mop</span>
               Clear
             </MenuItem>
             <MenuItem
@@ -362,7 +364,9 @@ const FileExplorer: React.FC<Props> = ({ files }) => {
                 setSettingsModalOpen(true);
                 setAnchorEl(null);
               }}
+              className="flex items-center gap-2"
             >
+              <span className="material-symbols-outlined">settings</span>
               Configure
             </MenuItem>
           </Menu>

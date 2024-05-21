@@ -5,7 +5,7 @@ import { ThemeProvider, createTheme } from "@mui/material/styles";
 import CssBaseline from "@mui/material/CssBaseline";
 import { InvokeEvent } from "./enums/invoke-event.enum";
 import Snackbar from "@mui/material/Snackbar";
-import { Alert, Box, LinearProgress, Slide, SlideProps } from "@mui/material";
+import { Alert, Box, CircularProgress, Slide, SlideProps } from "@mui/material";
 const lightTheme = createTheme({
   palette: {
     mode: "light",
@@ -102,8 +102,8 @@ function App() {
       <ThemeProvider theme={lightTheme}>
         <CssBaseline />
         {loading && (
-          <Box sx={{ width: "100%", margin: "1em 0" }}>
-            <LinearProgress />
+          <Box className="flex justify-center items-center w-full h-full fixed backdrop-blur-sm">
+            <CircularProgress />
           </Box>
         )}
         <Snackbar
