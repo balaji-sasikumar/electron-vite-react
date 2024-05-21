@@ -181,7 +181,7 @@ const openFileInvocation = async (
             ipcEvent.sender.send(
               InvokeEvent.FileProcessing,
               Status.Error,
-              `No internet connection`
+              `File ${file.name} cannot be edited in offline mode`
             );
             return;
           }
