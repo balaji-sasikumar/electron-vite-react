@@ -2,7 +2,7 @@ import { app, ipcMain } from "electron";
 import { dialog } from "electron";
 import * as path from "path";
 import * as os from "os";
-import { DATA_FORMAT_NOT_SUPPORTED, readOnlyExtensions } from "./utils";
+import { DATA_FORMAT_NOT_SUPPORTED, editableExtensions } from "./utils";
 import { InvokeEvent } from "../../src/enums/invoke-event.enum";
 import {
   addDirectory,
@@ -167,7 +167,7 @@ const openFileInvocation = async (
     openFile(tempPath, newPath, base64Data);
     ipcEvent.sender.send(InvokeEvent.Loading, false);
     const actualExt = file.name.split(".")[1].toLowerCase();
-    isEditable = !readOnlyExtensions.includes(actualExt);
+    isEditable = editableExtensions.includes(actualExt);
 
     let paths = [newPath];
     let intervalId: NodeJS.Timeout;
@@ -176,14 +176,24 @@ const openFileInvocation = async (
       if (!isFileOpen) {
         if (isEditable) {
           ipcEvent.sender.send(InvokeEvent.Loading, true);
-          await encryptAndSaveFile(newPath, newPath + ".txt", key);
+          if (!navigator.onLine) {
+            ipcEvent.sender.send(InvokeEvent.Loading, false);
+            ipcEvent.sender.send(
+              InvokeEvent.FileProcessing,
+              Status.Error,
+              `No internet connection`
+            );
+            return;
+          }
+          const encryptedPath = newPath + ".txt";
+          await encryptAndSaveFile(newPath, encryptedPath, key);
           await uploadFile(
             file.name,
-            newPath + ".txt",
+            encryptedPath,
             configuration,
             directories
           );
-          removeFileFromTempPath(newPath + ".txt");
+          removeFileFromTempPath(encryptedPath);
         }
 
         removeFileFromTempPath(newPath);
