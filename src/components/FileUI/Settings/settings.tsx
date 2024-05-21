@@ -30,7 +30,17 @@ const SettingsComponent: React.FC<SettingsComponentProps> = ({
   const [shareName, setShareName] = useState<string>("");
   const [privateKey, setPrivateKey] = useState<string>("");
   const [readOnly, setReadOnly] = useState<boolean>(false);
-
+  useEffect(() => {
+    const configuration = localStorage.getItem("configuration");
+    if (configuration) {
+      const config = JSON.parse(configuration);
+      setAccountName(config.accountName);
+      setAccountKey(config.accountKey);
+      setShareName(config.shareName);
+      setPrivateKey(config.privateKey);
+      setReadOnly(true);
+    }
+  }, []);
   const handleSave = () => {
     const storageData = {
       accountName,

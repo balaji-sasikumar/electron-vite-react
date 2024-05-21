@@ -14,6 +14,8 @@ import "./file-explorer.css";
 import { InvokeEvent } from "@/enums/invoke-event.enum";
 import AlertDialog from "../Dialog/dialog";
 import { Card, CardContent, IconButton, Typography } from "@mui/material";
+import Menu from "@mui/material/Menu";
+import MenuItem from "@mui/material/MenuItem";
 import SettingsComponent from "../Settings/settings";
 interface File {
   kind: string;
@@ -40,6 +42,12 @@ const FileExplorer: React.FC<Props> = ({ files }) => {
   const [currentDirectory, setCurrentDirectory] = useState<string>(
     (localStorage.getItem("directories") || "").split("/").pop() || ""
   );
+  const [anchorEl, setAnchorEl] = React.useState<null | HTMLElement>(null);
+  const open = Boolean(anchorEl);
+  const handleMenuClick = (event: React.MouseEvent<HTMLElement>) => {
+    setAnchorEl(event.currentTarget);
+  };
+
   const [directoryModalOpen, setDirectoryModalOpen] = React.useState(false);
   const [folderName, setFolderName] = React.useState("");
 
@@ -317,18 +325,47 @@ const FileExplorer: React.FC<Props> = ({ files }) => {
             <span className="material-symbols-outlined">upload_file</span>
             Upload File
           </Button>
-          <Button
-            onClick={() => {
-              localStorage.clear();
-              setSettingsModalOpen(true);
-            }}
+          <IconButton
+            onClick={handleMenuClick}
             className="flex-1"
             disabled={!showOptions}
-            variant="outlined"
+            aria-label="more"
+            id="long-button"
+            aria-controls={open ? "long-menu" : undefined}
+            aria-expanded={open ? "true" : undefined}
+            aria-haspopup="true"
           >
             <span className="material-symbols-outlined">more_vert</span>
-            Clear and Configure
-          </Button>
+          </IconButton>
+          <Menu
+            id="long-menu"
+            MenuListProps={{
+              "aria-labelledby": "long-button",
+            }}
+            anchorEl={anchorEl}
+            open={open}
+            onClose={() => {
+              setAnchorEl(null);
+            }}
+          >
+            <MenuItem
+              onClick={() => {
+                localStorage.clear();
+                window.location.reload();
+                setAnchorEl(null);
+              }}
+            >
+              Clear
+            </MenuItem>
+            <MenuItem
+              onClick={() => {
+                setSettingsModalOpen(true);
+                setAnchorEl(null);
+              }}
+            >
+              Configure
+            </MenuItem>
+          </Menu>
         </div>
       </div>
       {files.length == 0 ? (
