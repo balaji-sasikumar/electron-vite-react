@@ -2,7 +2,11 @@ import { app, ipcMain } from "electron";
 import { dialog } from "electron";
 import * as path from "path";
 import * as os from "os";
-import { DATA_FORMAT_NOT_SUPPORTED, editableExtensions } from "./utils";
+import {
+  DATA_FORMAT_NOT_SUPPORTED,
+  editableExtensions,
+  supportedExtensions,
+} from "./utils";
 import { InvokeEvent } from "../../src/enums/invoke-event.enum";
 import {
   addDirectory,
@@ -82,6 +86,12 @@ const uploadHandler = async (
   try {
     let filePaths = await dialog.showOpenDialog({
       properties: ["openFile"],
+      filters: [
+        {
+          name: "Extension",
+          extensions: supportedExtensions,
+        },
+      ],
     });
     if (filePaths.canceled) {
       return "canceled";

@@ -40,3 +40,25 @@ export const editableExtensions = [
   "ppt", // PowerPoint presentations
   "odp", // OpenDocument presentation
 ];
+export const supportedExtensions = [
+  "png",
+  "jpg",
+  "jpeg",
+  "docx",
+  "doc",
+  "xlsx",
+  "xls",
+  "csv",
+  "pdf",
+  "webp",
+  "gif",
+  "mp4",
+  "mpeg",
+  "avi",
+  "mp3",
+  "wav",
+  "flac",
+  "ogg",
+  "txt",
+  "mov",
+];

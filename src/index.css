@@ -77,7 +77,8 @@ button:focus-visible {
 }
 .mp4,
 .mpeg,
-.avi {
+.avi,
+.mov {
   content: url(./assets/video.png);
 }
 
