@@ -399,15 +399,17 @@ const FileExplorer: React.FC<Props> = ({ files }) => {
                     }}
                     className="cursor-pointer"
                   >
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-4">
                       {row.kind === "directory" ? (
-                        <span className="material-symbols-outlined material-symbols-fill text-yellow-600">
+                        <span className="material-symbols-outlined material-symbols-fill text-yellow-400 max-w-6 max-h-6">
                           folder_open
                         </span>
                       ) : (
-                        <span className="material-symbols-outlined material-symbols-fill text-blue-500">
-                          description
-                        </span>
+                        <span
+                          className={`${row.name
+                            .split(".")?.[1]
+                            .toLowerCase()} max-w-6 max-h-6`}
+                        ></span>
                       )}
                       {row.kind === "file"
                         ? row.name.split(".txt")?.[0]
@@ -426,7 +428,7 @@ const FileExplorer: React.FC<Props> = ({ files }) => {
                     onClick={() => deleteDialog(row)}
                   >
                     <span className="material-symbols-outlined font-extralight">
-                      delete_forever
+                      delete
                     </span>
                   </TableCell>
                 </TableRow>

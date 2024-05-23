@@ -55,3 +55,35 @@ button:focus-visible {
 .material-symbols-fill {
   font-variation-settings: "FILL" 1, "wght" 400, "GRAD" 0, "opsz" 24;
 }
+
+.docx,
+.doc {
+  content: url(./assets/word.svg);
+}
+.xlsx,
+.csv,
+.xls {
+  content: url(./assets/excel.svg);
+}
+.pdf {
+  content: url(./assets/pdf.png);
+}
+.jpg,
+.jpeg,
+.png,
+.webp,
+.gif {
+  content: url(./assets/image.png);
+}
+.mp4,
+.mpeg,
+.avi {
+  content: url(./assets/video.png);
+}
+
+.mp3,
+.wav,
+.flac,
+.ogg {
+  content: url(./assets/music.svg);
+}
