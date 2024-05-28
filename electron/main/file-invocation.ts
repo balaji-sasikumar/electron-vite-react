@@ -183,11 +183,18 @@ const openFileInvocation = async (
 
     let paths = [newPath];
     let intervalId: NodeJS.Timeout;
-    let isAlreadyOpened = await isFileOpened(paths).catch(() => false);
-    if (isAlreadyOpened) {
-      ipcEvent.sender.send(InvokeEvent.Loading, false);
-      return;
-    }
+    try {
+      let isAlreadyOpened = await isFileOpened(paths).catch(() => false);
+      if (isAlreadyOpened) {
+        ipcEvent.sender.send(InvokeEvent.Loading, false);
+        ipcEvent.sender.send(
+          InvokeEvent.FileProcessing,
+          Status.Error,
+          `The file ${file.name} is already opened`
+        );
+        return;
+      }
+    } catch (error) {}
     let skipInitialChange = true;
     const watcher = chokidar
       .watch(newPath, { awaitWriteFinish: true })
@@ -209,26 +216,16 @@ const openFileInvocation = async (
             return;
           }
           const encryptedPath = newPath + ".txt";
-          try {
-            await encryptAndSaveFile(newPath, encryptedPath, key);
-            await uploadFile(
-              file.name,
-              encryptedPath,
-              configuration,
-              directories
-            );
-            removeFileFromTempPath(encryptedPath);
-            ipcEvent.sender.send(InvokeEvent.Loading, false);
-          } catch (error: any) {
-            ipcEvent.sender.send(InvokeEvent.Loading, false);
-            ipcEvent.sender.send(
-              InvokeEvent.FileProcessing,
-              Status.Error,
-              error?.details?.message ||
-                "An error occurred while editing the file"
-            );
-            return;
-          }
+
+          await encryptAndSaveFile(newPath, encryptedPath, key);
+          await uploadFile(
+            file.name,
+            encryptedPath,
+            configuration,
+            directories
+          );
+          removeFileFromTempPath(encryptedPath);
+          ipcEvent.sender.send(InvokeEvent.Loading, false);
         }
       });
     intervalId = setInterval(async () => {
