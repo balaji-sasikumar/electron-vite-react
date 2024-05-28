@@ -21,7 +21,7 @@ export const isFileOpened = async (paths: string[]): Promise<boolean> => {
           if (error) {
             reject(error);
           }
-          resolve(hashTable[paths[0]]);
+          resolve(hashTable?.[paths?.[0]]);
         }
       );
     } else {

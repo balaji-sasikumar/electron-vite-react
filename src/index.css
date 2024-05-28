@@ -88,3 +88,6 @@ button:focus-visible {
 .ogg {
   content: url(./assets/music.svg);
 }
+.txt {
+  content: url(./assets/text.png);
+}
