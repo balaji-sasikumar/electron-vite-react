@@ -1,7 +1,9 @@
-import { app, ipcMain } from "electron";
+import { ipcMain } from "electron";
 import { dialog } from "electron";
 import * as path from "path";
 import * as os from "os";
+import { createRequire } from "node:module";
+const chokidar = createRequire(import.meta.url)("chokidar");
 import {
   DATA_FORMAT_NOT_SUPPORTED,
   editableExtensions,
@@ -173,18 +175,29 @@ const openFileInvocation = async (
       return;
     }
     const base64Data = decrypted.split(",")[1];
-
     openFile(tempPath, newPath, base64Data);
+
     ipcEvent.sender.send(InvokeEvent.Loading, false);
     const actualExt = file.name.split(".")[1].toLowerCase();
     isEditable = editableExtensions.includes(actualExt);
 
     let paths = [newPath];
     let intervalId: NodeJS.Timeout;
-    intervalId = setInterval(async () => {
-      let isFileOpen = await isFileOpened(paths);
-      if (!isFileOpen) {
-        if (isEditable) {
+    let isAlreadyOpened = await isFileOpened(paths).catch(() => false);
+    if (isAlreadyOpened) {
+      ipcEvent.sender.send(InvokeEvent.Loading, false);
+      return;
+    }
+    let skipInitialChange = true;
+    const watcher = chokidar
+      .watch(newPath, { awaitWriteFinish: true })
+      .on("all", async (event: any, path: any) => {
+        console.log(event, path);
+        if (skipInitialChange) {
+          skipInitialChange = false;
+          return;
+        }
+        if (isEditable && event === "change") {
           ipcEvent.sender.send(InvokeEvent.Loading, true);
           if (!onlineStatus) {
             ipcEvent.sender.send(InvokeEvent.Loading, false);
@@ -196,18 +209,34 @@ const openFileInvocation = async (
             return;
           }
           const encryptedPath = newPath + ".txt";
-          await encryptAndSaveFile(newPath, encryptedPath, key);
-          await uploadFile(
-            file.name,
-            encryptedPath,
-            configuration,
-            directories
-          );
-          removeFileFromTempPath(encryptedPath);
+          try {
+            await encryptAndSaveFile(newPath, encryptedPath, key);
+            await uploadFile(
+              file.name,
+              encryptedPath,
+              configuration,
+              directories
+            );
+            removeFileFromTempPath(encryptedPath);
+            ipcEvent.sender.send(InvokeEvent.Loading, false);
+          } catch (error: any) {
+            ipcEvent.sender.send(InvokeEvent.Loading, false);
+            ipcEvent.sender.send(
+              InvokeEvent.FileProcessing,
+              Status.Error,
+              error?.details?.message ||
+                "An error occurred while editing the file"
+            );
+            return;
+          }
         }
-
+      });
+    intervalId = setInterval(async () => {
+      let isFileOpen = await isFileOpened(paths).catch(() => false);
+      if (!isFileOpen) {
         removeFileFromTempPath(newPath);
-        clearInterval(intervalId!);
+        clearInterval(intervalId);
+        watcher.close();
         ipcEvent.sender.send(InvokeEvent.Loading, false);
       }
     }, 5000);

@@ -39,6 +39,7 @@ export const editableExtensions = [
   "pptx", // PowerPoint presentations
   "ppt", // PowerPoint presentations
   "odp", // OpenDocument presentation
+  "numbers", // Numbers files
 ];
 export const supportedExtensions = [
   "png",

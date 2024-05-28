@@ -25,10 +25,6 @@ export const isFileOpened = async (paths: string[]): Promise<boolean> => {
         }
       );
     } else {
-      console.log(
-        "Checking if file is opened on non-Windows platform",
-        `lsof -F n -- "${paths[0]}"`
-      );
       exec(`lsof -F n -- "${paths[0]}"`, (error, stdout, stderr) => {
         if (error || stderr) {
           resolve(false);
