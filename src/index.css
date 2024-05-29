@@ -62,7 +62,8 @@ button:focus-visible {
 }
 .xlsx,
 .csv,
-.xls {
+.xls,
+.numbers {
   content: url(./assets/excel.svg);
 }
 .pdf {

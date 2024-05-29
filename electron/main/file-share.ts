@@ -1,6 +1,8 @@
 import { createRequire } from "node:module";
 const Opened = createRequire(import.meta.url)("@ronomon/opened");
 import * as fs from "fs";
+import * as os from "os";
+import * as path from "path";
 import { exec } from "child_process";
 import mime from "mime";
 import { AES, enc } from "crypto-ts";
@@ -9,7 +11,12 @@ import {
   ShareServiceClient,
   StorageSharedKeyCredential,
 } from "@azure/storage-file-share";
-import { chunkSeparator, DATA_FORMAT_NOT_SUPPORTED, chunkSize } from "./utils";
+import {
+  chunkSeparator,
+  DATA_FORMAT_NOT_SUPPORTED,
+  chunkSize,
+  tempFolder,
+} from "./utils";
 import * as zlib from "zlib";
 
 export const isFileOpened = async (paths: string[]): Promise<boolean> => {
@@ -121,30 +128,21 @@ export const encryptAndSaveFile = async (
     });
   });
 };
-export const openFile = (
-  tempPath: string,
-  newPath: string,
-  base64Data: string
-) => {
-  fs.mkdir(tempPath, { recursive: true }, (err) => {
-    console.log("Creating directory:", tempPath, newPath);
+export const openFile = (newPath: string, base64Data: string) => {
+  const directoryPath = path.dirname(newPath);
+  fs.mkdir(directoryPath, { recursive: true }, (err) => {
     if (err) {
       console.error("Error creating directory:", err);
       return;
     }
-    fs.writeFile(newPath, base64Data, { encoding: "base64" }, (err) => {
+    fs.writeFile(newPath, base64Data, { encoding: "base64" }, async (err) => {
       if (err) {
         console.error("Error writing file:", err);
         return;
       }
-      shell
-        .openPath(newPath)
-        .then(() => {
-          console.log("File opened successfully");
-        })
-        .catch((err) => {
-          console.error("Error opening file:", err);
-        });
+      await shell.openPath(newPath).catch((err) => {
+        console.error("Error opening file:", err);
+      });
     });
   });
 };
@@ -294,7 +292,7 @@ export const removeFileFromTempPath = (filePath: string) => {
       console.error("Error deleting file:", err);
       return;
     }
-    console.log("File removed from temp successfully");
+    console.log(`${filePath} removed from temp successfully`);
   });
 };
 
@@ -342,3 +340,8 @@ async function decompressStream(
     });
   });
 }
+
+export const getTempPath = (fileName: string) => {
+  let tempPath = os.tmpdir();
+  return path.join(tempPath, tempFolder, fileName);
+};

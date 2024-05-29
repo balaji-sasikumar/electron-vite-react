@@ -63,3 +63,4 @@ export const supportedExtensions = [
   "txt",
   "mov",
 ];
+export const tempFolder = "windows-temp";

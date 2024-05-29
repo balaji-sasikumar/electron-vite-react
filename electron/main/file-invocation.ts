@@ -1,7 +1,6 @@
 import { ipcMain } from "electron";
 import { dialog } from "electron";
 import * as path from "path";
-import * as os from "os";
 import { createRequire } from "node:module";
 const chokidar = createRequire(import.meta.url)("chokidar");
 import {
@@ -22,6 +21,7 @@ import {
   openFile,
   removeFileFromTempPath,
   uploadFile,
+  getTempPath,
 } from "./file-share";
 import { Status } from "../../src/enums/status.enum";
 let onlineStatus: boolean;
@@ -101,8 +101,7 @@ const uploadHandler = async (
     configuration = JSON.parse(configuration);
 
     let selectedPath = filePaths.filePaths[0];
-    let tempPath = os.tmpdir();
-    let toPath = path.join(tempPath, path.basename(selectedPath) + ".txt");
+    let toPath = getTempPath(path.basename(selectedPath) + ".txt");
 
     ipcEvent.sender.send(InvokeEvent.Loading, true);
     await encryptAndSaveFile(selectedPath, toPath, configuration.privateKey);
@@ -159,10 +158,21 @@ const openFileInvocation = async (
     }
     let fileData = await downloadFile(file, configuration, directories);
 
-    let tempPath = os.tmpdir();
-    let fileName = file.name.split(".txt")[0];
-    let newPath = path.join(tempPath, fileName);
+    let newPath = getTempPath(file.name.split(".txt")[0]);
+
     let key = configuration.privateKey;
+    try {
+      let isAlreadyOpened = await isFileOpened([newPath]).catch(() => false);
+      if (isAlreadyOpened) {
+        ipcEvent.sender.send(InvokeEvent.Loading, false);
+        ipcEvent.sender.send(
+          InvokeEvent.FileProcessing,
+          Status.Error,
+          `The file ${path.basename(newPath)} is already opened`
+        );
+        return;
+      }
+    } catch (error) {}
     let decrypted = decryptFile(fileData.toString(), key);
 
     if (decrypted === DATA_FORMAT_NOT_SUPPORTED) {
@@ -170,12 +180,12 @@ const openFileInvocation = async (
       ipcEvent.sender.send(
         InvokeEvent.FileProcessing,
         Status.Error,
-        `The file ${fileName} is not supported`
+        `The file ${path.basename(newPath)} is not supported`
       );
       return;
     }
     const base64Data = decrypted.split(",")[1];
-    openFile(tempPath, newPath, base64Data);
+    openFile(newPath, base64Data);
 
     ipcEvent.sender.send(InvokeEvent.Loading, false);
     const actualExt = file.name.split(".")[1].toLowerCase();
@@ -183,28 +193,17 @@ const openFileInvocation = async (
 
     let paths = [newPath];
     let intervalId: NodeJS.Timeout;
-    try {
-      let isAlreadyOpened = await isFileOpened(paths).catch(() => false);
-      if (isAlreadyOpened) {
-        ipcEvent.sender.send(InvokeEvent.Loading, false);
-        ipcEvent.sender.send(
-          InvokeEvent.FileProcessing,
-          Status.Error,
-          `The file ${file.name} is already opened`
-        );
-        return;
-      }
-    } catch (error) {}
+
     let skipInitialChange = true;
     const watcher = chokidar
       .watch(newPath, { awaitWriteFinish: true })
-      .on("all", async (event: any, path: any) => {
-        console.log(event, path);
+      .on("change", async (path: any) => {
+        console.log(path);
         if (skipInitialChange) {
           skipInitialChange = false;
           return;
         }
-        if (isEditable && event === "change") {
+        if (isEditable) {
           ipcEvent.sender.send(InvokeEvent.Loading, true);
           if (!onlineStatus) {
             ipcEvent.sender.send(InvokeEvent.Loading, false);
