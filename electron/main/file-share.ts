@@ -21,6 +21,8 @@ import * as zlib from "zlib";
 import { Configuration } from "electron/interfaces/configuration.interface";
 
 export class FileShare {
+  private static instance: FileShare;
+  private constructor() {}
   isFileOpened = async (paths: string[]): Promise<boolean> => {
     return new Promise((resolve, reject) => {
       if (process.platform === "win32") {
@@ -342,6 +344,9 @@ export class FileShare {
     return path.join(tempPath, tempFolder, fileName);
   };
   public static getInstance = () => {
-    return new FileShare();
+    if (!FileShare.instance) {
+      FileShare.instance = new FileShare();
+    }
+    return FileShare.instance;
   };
 }

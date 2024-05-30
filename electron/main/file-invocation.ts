@@ -15,6 +15,8 @@ let onlineStatus: boolean;
 
 export class FileInvocationHandler {
   fileShare = FileShare.getInstance();
+  private static instance: FileInvocationHandler;
+  private constructor() {}
 
   deleteFileHandler = async (
     ipcEvent: Electron.IpcMainInvokeEvent,
@@ -265,7 +267,10 @@ export class FileInvocationHandler {
     ipcEvent.sender.send(InvokeEvent.Loading, loading);
   };
   public static getInstance() {
-    return new FileInvocationHandler();
+    if (!FileInvocationHandler.instance) {
+      FileInvocationHandler.instance = new FileInvocationHandler();
+    }
+    return FileInvocationHandler.instance;
   }
 }
 
