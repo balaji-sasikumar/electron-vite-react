@@ -7,16 +7,6 @@ import { fileInvocation } from "./file-invocation";
 globalThis.__filename = fileURLToPath(import.meta.url);
 globalThis.__dirname = dirname(__filename);
 
-// The built directory structure
-//
-// ├─┬ dist-electron
-// │ ├─┬ main
-// │ │ └── index.js    > Electron-Main
-// │ └─┬ preload
-// │   └── index.mjs    > Preload-Scripts
-// ├─┬ dist
-// │ └── index.html    > Electron-Renderer
-//
 process.env.DIST_ELECTRON = join(__dirname, "../");
 process.env.DIST = join(process.env.DIST_ELECTRON, "../dist");
 process.env.VITE_PUBLIC = process.env.VITE_DEV_SERVER_URL
@@ -59,8 +49,6 @@ async function createWindow() {
       // contextIsolation: false,
     },
   });
-  nativeTheme.themeSource = "dark";
-
   if (url) {
     // electron-vite-vue#298
     win.loadURL(url);
@@ -80,8 +68,6 @@ async function createWindow() {
     if (url.startsWith("https:")) shell.openExternal(url);
     return { action: "deny" };
   });
-
-  // Apply electron-updater
   fileInvocation(win);
 }
 

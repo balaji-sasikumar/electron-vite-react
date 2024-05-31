@@ -11,11 +11,11 @@ import {
 import { InvokeEvent } from "../../src/enums/invoke-event.enum";
 import { FileShare } from "./file-share";
 import { Status } from "../../src/enums/status.enum";
+import { Configuration } from "electron/interfaces/configuration.interface";
 let onlineStatus: boolean;
 
 export class FileInvocationHandler {
   fileShare = FileShare.getInstance();
-  private static instance: FileInvocationHandler;
   private constructor() {}
 
   deleteFileHandler = async (
@@ -165,7 +165,7 @@ export class FileInvocationHandler {
         directories
       );
 
-      let newPath = this.fileShare.getTempPath(file.name.split(".txt")[0]);
+      let newPath = this.fileShare.getTempPath(file.name.split(".txt")[0]); // to view the file
 
       let key = configuration.privateKey;
       try {
@@ -204,50 +204,41 @@ export class FileInvocationHandler {
       let intervalId: NodeJS.Timeout;
 
       let skipInitialChange = true;
-      const watcher = chokidar
-        .watch(newPath, { awaitWriteFinish: true })
-        .on("change", async (path: any) => {
-          console.log(path);
-          if (skipInitialChange) {
-            skipInitialChange = false;
-            return;
-          }
-          if (isEditable) {
-            ipcEvent.sender.send(InvokeEvent.Loading, true);
-            if (!onlineStatus) {
-              ipcEvent.sender.send(InvokeEvent.Loading, false);
-              ipcEvent.sender.send(
-                InvokeEvent.FileProcessing,
-                Status.Error,
-                `File ${file.name} cannot be edited in offline mode`
-              );
+      let watcher: any;
+      if (isEditable) {
+        watcher = chokidar
+          .watch(newPath, { awaitWriteFinish: true })
+          .on("change", async (path: any) => {
+            console.log(path);
+            if (skipInitialChange) {
+              skipInitialChange = false;
               return;
             }
-            const encryptedPath = newPath + ".txt";
-
-            await this.fileShare.encryptAndSaveFile(
+            await this.saveAndUpload(
+              ipcEvent,
+              file,
               newPath,
-              encryptedPath,
-              key
-            );
-            await this.fileShare.uploadFile(
-              file.name,
-              encryptedPath,
               configuration,
               directories
             );
-            this.fileShare.removeFileFromTempPath(encryptedPath);
-            ipcEvent.sender.send(InvokeEvent.Loading, false);
-          }
-        });
+          });
+      }
+
       intervalId = setInterval(async () => {
         let isFileOpen = await this.fileShare
           .isFileOpened(paths)
           .catch(() => false);
         if (!isFileOpen) {
+          await this.saveAndUpload(
+            ipcEvent,
+            file,
+            newPath,
+            configuration,
+            directories
+          );
           this.fileShare.removeFileFromTempPath(newPath);
           clearInterval(intervalId);
-          watcher.close();
+          watcher?.close();
           ipcEvent.sender.send(InvokeEvent.Loading, false);
         }
       }, 5000);
@@ -266,11 +257,43 @@ export class FileInvocationHandler {
   ) => {
     ipcEvent.sender.send(InvokeEvent.Loading, loading);
   };
-  public static getInstance() {
-    if (!FileInvocationHandler.instance) {
-      FileInvocationHandler.instance = new FileInvocationHandler();
+  private saveAndUpload = async (
+    ipcEvent: Electron.IpcMainInvokeEvent,
+    file: { name: any },
+    filePath: string,
+    configuration: Configuration,
+    directories: string
+  ) => {
+    ipcEvent.sender.send(InvokeEvent.Loading, true);
+    if (!onlineStatus) {
+      ipcEvent.sender.send(InvokeEvent.Loading, false);
+      ipcEvent.sender.send(
+        InvokeEvent.FileProcessing,
+        Status.Error,
+        `File ${file.name} cannot be saved in offline mode`
+      );
+      return;
     }
-    return FileInvocationHandler.instance;
+    // filePath is the path of the file that is being opened
+    const encryptedPath = filePath + ".txt";
+
+    await this.fileShare.encryptAndSaveFile(
+      filePath,
+      encryptedPath,
+      configuration.privateKey as string
+    );
+    await this.fileShare.uploadFile(
+      file.name,
+      encryptedPath,
+      configuration,
+      directories
+    );
+    this.fileShare.removeFileFromTempPath(encryptedPath);
+    ipcEvent.sender.send(InvokeEvent.Loading, false);
+  };
+
+  public static getInstance() {
+    return new FileInvocationHandler();
   }
 }
 
