@@ -204,11 +204,11 @@ export class FileInvocationHandler {
       let intervalId: NodeJS.Timeout;
 
       let skipInitialChange = true;
-      let watcher: any;
-      if (isEditable) {
-        watcher = chokidar
-          .watch(newPath, { awaitWriteFinish: true })
-          .on("change", async (path: any) => {
+
+      const watcher = chokidar
+        .watch(newPath, { awaitWriteFinish: true })
+        .on("change", async (path: any) => {
+          if (isEditable) {
             console.log(path);
             if (skipInitialChange) {
               skipInitialChange = false;
@@ -221,8 +221,8 @@ export class FileInvocationHandler {
               configuration,
               directories
             );
-          });
-      }
+          }
+        });
 
       intervalId = setInterval(async () => {
         let isFileOpen = await this.fileShare
