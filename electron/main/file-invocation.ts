@@ -235,7 +235,7 @@ export class FileInvocationHandler {
       ipcEvent.sender.send(
         InvokeEvent.FileProcessing,
         Status.Error,
-        JSON.stringify(error)
+        error?.details?.message || "An error occurred while opening the file"
       );
     }
   };
