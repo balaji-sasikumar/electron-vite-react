@@ -1,8 +1,6 @@
 import { ipcMain } from "electron";
 import { dialog } from "electron";
 import * as path from "path";
-import { createRequire } from "node:module";
-const chokidar = createRequire(import.meta.url)("chokidar");
 import {
   DATA_FORMAT_NOT_SUPPORTED,
   editableExtensions,
@@ -203,17 +201,12 @@ export class FileInvocationHandler {
       let paths = [newPath];
       let intervalId: NodeJS.Timeout;
 
-      let skipInitialChange = true;
-
-      const watcher = chokidar
-        .watch(newPath, { awaitWriteFinish: true })
-        .on("change", async (path: any) => {
+      intervalId = setInterval(async () => {
+        let isFileOpen = await this.fileShare
+          .isFileOpened(paths)
+          .catch(() => false);
+        if (!isFileOpen) {
           if (isEditable) {
-            console.log(path);
-            if (skipInitialChange) {
-              skipInitialChange = false;
-              return;
-            }
             await this.saveAndUpload(
               ipcEvent,
               file,
@@ -222,23 +215,8 @@ export class FileInvocationHandler {
               directories
             );
           }
-        });
-
-      intervalId = setInterval(async () => {
-        let isFileOpen = await this.fileShare
-          .isFileOpened(paths)
-          .catch(() => false);
-        if (!isFileOpen) {
-          await this.saveAndUpload(
-            ipcEvent,
-            file,
-            newPath,
-            configuration,
-            directories
-          );
           this.fileShare.removeFileFromTempPath(newPath);
           clearInterval(intervalId);
-          watcher?.close();
           ipcEvent.sender.send(InvokeEvent.Loading, false);
         }
       }, 5000);

@@ -45,59 +45,6 @@ export class FileShare {
     });
   };
 
-  private convertFileToBase64 = async (filePath: string): Promise<string> => {
-    return new Promise((resolve, reject) =>
-      fs.readFile(filePath, (err, data) => {
-        if (err) {
-          reject(err);
-        }
-        resolve(Buffer.from(data).toString("base64"));
-      })
-    );
-  };
-
-  private encryptFile = (fileDataUrl: string, key: string) => {
-    const encryptedChunks = [];
-    const totalChunks = Math.ceil(fileDataUrl.length / chunkSize);
-
-    for (let chunkIndex = 0; chunkIndex < totalChunks; chunkIndex++) {
-      const start = chunkIndex * chunkSize;
-      const end = start + chunkSize;
-      const chunk = fileDataUrl.substring(start, end);
-
-      const encChunk = this.encryptionAES(chunk, key);
-      encryptedChunks.push(encChunk);
-    }
-
-    const joinedEncryptedData = encryptedChunks.join(chunkSeparator);
-    return joinedEncryptedData;
-  };
-  private encryptionAES(msg: string, key: string) {
-    if (msg && key) {
-      return AES.encrypt(msg, key).toString();
-    } else {
-      return msg;
-    }
-  }
-
-  private decryptionAES(msg: string, key: string) {
-    try {
-      if (msg && key) {
-        const bytes = AES.decrypt(msg, key);
-        const plaintext = bytes.toString(enc.Utf8);
-        return plaintext || DATA_FORMAT_NOT_SUPPORTED;
-      } else if (!msg && key) {
-        return msg;
-      } else {
-        return DATA_FORMAT_NOT_SUPPORTED;
-      }
-    } catch (exception: any) {
-      return exception.message === "Malformed UTF-8 data"
-        ? DATA_FORMAT_NOT_SUPPORTED
-        : "";
-    }
-  }
-
   decryptFile = (encryptedData: string, key: string) => {
     const encryptedChunks = encryptedData.split(chunkSeparator);
     const decryptedChunks = [];
@@ -112,6 +59,7 @@ export class FileShare {
     const decryptedContent = decryptedChunks.join("");
     return decryptedContent;
   };
+
   encryptAndSaveFile = async (
     fromPath: string,
     toPath: string,
@@ -131,6 +79,7 @@ export class FileShare {
       });
     });
   };
+
   openFile = (newPath: string, base64Data: string) => {
     const directoryPath = path.dirname(newPath);
     fs.mkdir(directoryPath, { recursive: true }, (err) => {
@@ -197,21 +146,6 @@ export class FileShare {
     return (downloadedContent as Buffer).toString();
   };
 
-  private async streamToBuffer(
-    readableStream: NodeJS.ReadableStream | undefined
-  ) {
-    return new Promise((resolve, reject) => {
-      const chunks: Uint8Array[] | Buffer[] = [];
-      readableStream?.on("data", (data) => {
-        chunks.push(data instanceof Buffer ? data : Buffer.from(data));
-      });
-      readableStream?.on("end", () => {
-        resolve(Buffer.concat(chunks));
-      });
-      readableStream?.on("error", reject);
-    });
-  }
-
   uploadFile = async (
     fileName: any,
     filePath: string,
@@ -231,7 +165,7 @@ export class FileShare {
     const compressedFilePath = `${filePath}.gz`;
     await this.compressFile(filePath, compressedFilePath);
     await fileClient.uploadFile(compressedFilePath);
-    fs.unlinkSync(compressedFilePath);
+    this.removeFileFromTempPath(compressedFilePath);
   };
 
   deleteFile = async (
@@ -293,6 +227,64 @@ export class FileShare {
     });
   };
 
+  getTempPath = (fileName: string) => {
+    return path.join(os.tmpdir(), tempFolder, fileName);
+  };
+
+  private convertFileToBase64 = async (filePath: string): Promise<string> => {
+    return new Promise((resolve, reject) =>
+      fs.readFile(filePath, (err, data) => {
+        if (err) {
+          reject(err);
+        }
+        resolve(Buffer.from(data).toString("base64"));
+      })
+    );
+  };
+
+  private encryptFile = (fileDataUrl: string, key: string) => {
+    const encryptedChunks = [];
+    const totalChunks = Math.ceil(fileDataUrl.length / chunkSize);
+
+    for (let chunkIndex = 0; chunkIndex < totalChunks; chunkIndex++) {
+      const start = chunkIndex * chunkSize;
+      const end = start + chunkSize;
+      const chunk = fileDataUrl.substring(start, end);
+
+      const encChunk = this.encryptionAES(chunk, key);
+      encryptedChunks.push(encChunk);
+    }
+
+    const joinedEncryptedData = encryptedChunks.join(chunkSeparator);
+    return joinedEncryptedData;
+  };
+
+  private encryptionAES(msg: string, key: string) {
+    if (msg && key) {
+      return AES.encrypt(msg, key).toString();
+    } else {
+      return msg;
+    }
+  }
+
+  private decryptionAES(msg: string, key: string) {
+    try {
+      if (msg && key) {
+        const bytes = AES.decrypt(msg, key);
+        const plaintext = bytes.toString(enc.Utf8);
+        return plaintext || DATA_FORMAT_NOT_SUPPORTED;
+      } else if (!msg && key) {
+        return msg;
+      } else {
+        return DATA_FORMAT_NOT_SUPPORTED;
+      }
+    } catch (exception: any) {
+      return exception.message === "Malformed UTF-8 data"
+        ? DATA_FORMAT_NOT_SUPPORTED
+        : "";
+    }
+  }
+
   private async compressFile(
     inputFilePath: string,
     outputFilePath: string
@@ -338,9 +330,20 @@ export class FileShare {
     });
   }
 
-  getTempPath = (fileName: string) => {
-    return path.join(os.tmpdir(), tempFolder, fileName);
-  };
+  private async streamToBuffer(
+    readableStream: NodeJS.ReadableStream | undefined
+  ) {
+    return new Promise((resolve, reject) => {
+      const chunks: Uint8Array[] | Buffer[] = [];
+      readableStream?.on("data", (data) => {
+        chunks.push(data instanceof Buffer ? data : Buffer.from(data));
+      });
+      readableStream?.on("end", () => {
+        resolve(Buffer.concat(chunks));
+      });
+      readableStream?.on("error", reject);
+    });
+  }
   public static getInstance = () => {
     return new FileShare();
   };
