@@ -158,17 +158,20 @@ export class FileInvocationHandler {
         return;
       }
       let viewPath = this.fileShare.getTempPath(file.name.split(".txt")[0]); // to view the file
-
-      if (this.openFilesMap.has(file.name)) {
-        console.log("file is already opened", this.openFilesMap);
-        this.loadingHandler(ipcEvent, false);
-        ipcEvent.sender.send(
-          InvokeEvent.FileProcessing,
-          Status.Error,
-          `The file ${path.basename(viewPath)} is already opened`
-        );
-        return;
-      }
+      try {
+        let isAlreadyOpened = await this.fileShare
+          .isFileOpened([viewPath])
+          .catch(() => false);
+        if (isAlreadyOpened) {
+          this.loadingHandler(ipcEvent, false);
+          ipcEvent.sender.send(
+            InvokeEvent.FileProcessing,
+            Status.Error,
+            `The file ${path.basename(viewPath)} is already opened`
+          );
+          return;
+        }
+      } catch (error) {}
       this.openFilesMap.set(file.name, "Opening");
 
       let fileData = await this.fileShare.downloadFile(
