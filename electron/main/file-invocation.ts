@@ -100,7 +100,7 @@ export class FileInvocationHandler {
         path.basename(selectedPath) + ".txt"
       );
 
-      ipcEvent.sender.send(InvokeEvent.Loading, true);
+      this.loadingHandler(ipcEvent, true);
       await this.fileShare.encryptAndSaveFile(
         selectedPath,
         toPath,
@@ -113,7 +113,7 @@ export class FileInvocationHandler {
         directories
       );
       this.fileShare.removeFileFromTempPath(toPath);
-      ipcEvent.sender.send(InvokeEvent.Loading, false);
+      this.loadingHandler(ipcEvent, false);
       ipcEvent.sender.send(InvokeEvent.TryFetch, "");
       ipcEvent.sender.send(
         InvokeEvent.FileProcessing,
@@ -121,7 +121,7 @@ export class FileInvocationHandler {
         `The file ${path.basename(selectedPath)} is uploaded successfully`
       );
     } catch (error: any) {
-      ipcEvent.sender.send(InvokeEvent.Loading, false);
+      this.loadingHandler(ipcEvent, false);
       ipcEvent.sender.send(
         InvokeEvent.FileProcessing,
         Status.Error,
@@ -145,7 +145,7 @@ export class FileInvocationHandler {
     directories: string
   ) => {
     try {
-      ipcEvent.sender.send(InvokeEvent.Loading, true);
+      this.loadingHandler(ipcEvent, true);
       let isEditable = true;
       configuration = JSON.parse(configuration);
       if (!file.name.endsWith(".txt") && !file.name.endsWith(".gz")) {
@@ -154,7 +154,7 @@ export class FileInvocationHandler {
           Status.Error,
           `The file ${file.name} is not supported`
         );
-        ipcEvent.sender.send(InvokeEvent.Loading, false);
+        this.loadingHandler(ipcEvent, false);
         return;
       }
       let fileData = await this.fileShare.downloadFile(
@@ -171,7 +171,7 @@ export class FileInvocationHandler {
           .isFileOpened([newPath])
           .catch(() => false);
         if (isAlreadyOpened) {
-          ipcEvent.sender.send(InvokeEvent.Loading, false);
+          this.loadingHandler(ipcEvent, false);
           ipcEvent.sender.send(
             InvokeEvent.FileProcessing,
             Status.Error,
@@ -183,7 +183,7 @@ export class FileInvocationHandler {
       let decrypted = this.fileShare.decryptFile(fileData.toString(), key);
 
       if (decrypted === DATA_FORMAT_NOT_SUPPORTED) {
-        ipcEvent.sender.send(InvokeEvent.Loading, false);
+        this.loadingHandler(ipcEvent, false);
         ipcEvent.sender.send(
           InvokeEvent.FileProcessing,
           Status.Error,
@@ -194,7 +194,7 @@ export class FileInvocationHandler {
       const base64Data = decrypted.split(",")[1];
       this.fileShare.openFile(newPath, base64Data);
 
-      ipcEvent.sender.send(InvokeEvent.Loading, false);
+      this.loadingHandler(ipcEvent, false);
       const actualExt = file.name.split(".")[1].toLowerCase();
       isEditable = editableExtensions.includes(actualExt);
 
@@ -217,11 +217,11 @@ export class FileInvocationHandler {
           }
           this.fileShare.removeFileFromTempPath(newPath);
           clearInterval(intervalId);
-          ipcEvent.sender.send(InvokeEvent.Loading, false);
+          this.loadingHandler(ipcEvent, false);
         }
       }, 5000);
     } catch (error: any) {
-      ipcEvent.sender.send(InvokeEvent.Loading, false);
+      this.loadingHandler(ipcEvent, false);
       ipcEvent.sender.send(
         InvokeEvent.FileProcessing,
         Status.Error,
@@ -229,9 +229,9 @@ export class FileInvocationHandler {
       );
     }
   };
-  loadingHandler = async (
+  loadingHandler = (
     ipcEvent: Electron.IpcMainInvokeEvent,
-    loading: any
+    loading: boolean
   ) => {
     ipcEvent.sender.send(InvokeEvent.Loading, loading);
   };
@@ -242,9 +242,9 @@ export class FileInvocationHandler {
     configuration: Configuration,
     directories: string
   ) => {
-    ipcEvent.sender.send(InvokeEvent.Loading, true);
+    this.loadingHandler(ipcEvent, true);
     if (!onlineStatus) {
-      ipcEvent.sender.send(InvokeEvent.Loading, false);
+      this.loadingHandler(ipcEvent, false);
       ipcEvent.sender.send(
         InvokeEvent.FileProcessing,
         Status.Error,
@@ -267,7 +267,7 @@ export class FileInvocationHandler {
       directories
     );
     this.fileShare.removeFileFromTempPath(encryptedPath);
-    ipcEvent.sender.send(InvokeEvent.Loading, false);
+    this.loadingHandler(ipcEvent, false);
   };
 
   public static getInstance() {
