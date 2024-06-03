@@ -65,37 +65,22 @@ export class FileShare {
     toPath: string,
     key: string
   ) => {
-    return new Promise<void>(async (resolve, reject) => {
-      const base64Data = await this.convertFileToBase64(fromPath);
+    try {
+      const base64Data = this.convertFileToBase64(fromPath);
       const dataURL = `data:${mime.getType(toPath)};base64,${base64Data}`;
       const encrypted = this.encryptFile(dataURL, key);
-      fs.writeFile(toPath, encrypted, (err) => {
-        if (err) {
-          console.error("Error writing file:", err);
-          reject(err);
-          return;
-        }
-        resolve();
-      });
-    });
+      fs.writeFileSync(toPath, encrypted);
+    } catch (err) {
+      console.error("Error writing file:", err);
+    }
   };
 
-  openFile = (newPath: string, base64Data: string) => {
+  openFile = async (newPath: string, base64Data: string) => {
     const directoryPath = path.dirname(newPath);
-    fs.mkdir(directoryPath, { recursive: true }, (err) => {
-      if (err) {
-        console.error("Error creating directory:", err);
-        return;
-      }
-      fs.writeFile(newPath, base64Data, { encoding: "base64" }, async (err) => {
-        if (err) {
-          console.error("Error writing file:", err);
-          return;
-        }
-        await shell.openPath(newPath).catch((err) => {
-          console.error("Error opening file:", err);
-        });
-      });
+    fs.mkdirSync(directoryPath, { recursive: true });
+    fs.writeFileSync(newPath, base64Data, { encoding: "base64" });
+    await shell.openPath(newPath).catch((err) => {
+      console.error("Error opening file:", err);
     });
   };
 
@@ -218,28 +203,21 @@ export class FileShare {
   };
 
   removeFileFromTempPath = (filePath: string) => {
-    fs.unlink(filePath, (err) => {
-      if (err) {
-        console.error("Error deleting file:", err);
-        return;
-      }
-      console.log(`${filePath} removed from temp successfully`);
-    });
+    try {
+      console.log("Removing file from temp path:", filePath);
+      fs.unlinkSync(filePath);
+    } catch (err) {
+      console.error("Error removing file:", err);
+    }
   };
 
   getTempPath = (fileName: string) => {
     return path.join(os.tmpdir(), tempFolder, fileName);
   };
 
-  private convertFileToBase64 = async (filePath: string): Promise<string> => {
-    return new Promise((resolve, reject) =>
-      fs.readFile(filePath, (err, data) => {
-        if (err) {
-          reject(err);
-        }
-        resolve(Buffer.from(data).toString("base64"));
-      })
-    );
+  private convertFileToBase64 = (filePath: string): string => {
+    const data = fs.readFileSync(filePath);
+    return Buffer.from(data).toString("base64");
   };
 
   private encryptFile = (fileDataUrl: string, key: string) => {

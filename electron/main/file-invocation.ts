@@ -14,6 +14,7 @@ let onlineStatus: boolean;
 
 export class FileInvocationHandler {
   fileShare = FileShare.getInstance();
+  openFilesMap = new Map<string, string>();
   private constructor() {}
 
   deleteFileHandler = async (
@@ -146,40 +147,37 @@ export class FileInvocationHandler {
   ) => {
     try {
       this.loadingHandler(ipcEvent, true);
-      let isEditable = true;
       configuration = JSON.parse(configuration);
       if (!file.name.endsWith(".txt") && !file.name.endsWith(".gz")) {
         ipcEvent.sender.send(
           InvokeEvent.FileProcessing,
           Status.Error,
-          `The file ${file.name} is not supported`
+          `The file ${file.name} is not supported for opening`
         );
         this.loadingHandler(ipcEvent, false);
         return;
       }
+
+      if (this.openFilesMap.has(file.name)) {
+        console.log("file is already opened", this.openFilesMap);
+        this.loadingHandler(ipcEvent, false);
+        ipcEvent.sender.send(
+          InvokeEvent.FileProcessing,
+          Status.Error,
+          `The file ${file.name} is already opened`
+        );
+        return;
+      }
+      this.openFilesMap.set(file.name, "Opening");
+
       let fileData = await this.fileShare.downloadFile(
         file,
         configuration,
         directories
       );
 
-      let newPath = this.fileShare.getTempPath(file.name.split(".txt")[0]); // to view the file
-
+      let viewPath = this.fileShare.getTempPath(file.name.split(".txt")[0]); // to view the file
       let key = configuration.privateKey;
-      try {
-        let isAlreadyOpened = await this.fileShare
-          .isFileOpened([newPath])
-          .catch(() => false);
-        if (isAlreadyOpened) {
-          this.loadingHandler(ipcEvent, false);
-          ipcEvent.sender.send(
-            InvokeEvent.FileProcessing,
-            Status.Error,
-            `The file ${path.basename(newPath)} is already opened`
-          );
-          return;
-        }
-      } catch (error) {}
       let decrypted = this.fileShare.decryptFile(fileData.toString(), key);
 
       if (decrypted === DATA_FORMAT_NOT_SUPPORTED) {
@@ -187,40 +185,48 @@ export class FileInvocationHandler {
         ipcEvent.sender.send(
           InvokeEvent.FileProcessing,
           Status.Error,
-          `The file ${path.basename(newPath)} is not supported`
+          `The file ${path.basename(viewPath)} is not in the correct format`
         );
+        this.openFilesMap.delete(file.name);
         return;
       }
       const base64Data = decrypted.split(",")[1];
-      this.fileShare.openFile(newPath, base64Data);
+      await this.fileShare.openFile(viewPath, base64Data);
 
       this.loadingHandler(ipcEvent, false);
       const actualExt = file.name.split(".")[1].toLowerCase();
-      isEditable = editableExtensions.includes(actualExt);
+      let isEditable = editableExtensions.includes(actualExt);
 
-      let paths = [newPath];
+      let paths = [viewPath];
       let intervalId: NodeJS.Timeout;
 
       intervalId = setInterval(async () => {
         let isFileOpen = await this.fileShare
           .isFileOpened(paths)
           .catch(() => false);
+        this.openFilesMap.set(file.name, "Opened");
+
+        console.log(isFileOpen, "isFileOpen");
         if (!isFileOpen) {
+          console.log("isEditable", isEditable);
           if (isEditable) {
             await this.saveAndUpload(
               ipcEvent,
               file,
-              newPath,
+              viewPath,
               configuration,
               directories
             );
           }
-          this.fileShare.removeFileFromTempPath(newPath);
+          this.fileShare.removeFileFromTempPath(viewPath);
           clearInterval(intervalId);
           this.loadingHandler(ipcEvent, false);
+          this.openFilesMap.delete(file.name);
+          console.log("#############################");
         }
       }, 5000);
     } catch (error: any) {
+      console.log(error);
       this.loadingHandler(ipcEvent, false);
       ipcEvent.sender.send(
         InvokeEvent.FileProcessing,
