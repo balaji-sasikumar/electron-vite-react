@@ -157,6 +157,7 @@ export class FileInvocationHandler {
         this.loadingHandler(ipcEvent, false);
         return;
       }
+      let viewPath = this.fileShare.getTempPath(file.name.split(".txt")[0]); // to view the file
 
       if (this.openFilesMap.has(file.name)) {
         console.log("file is already opened", this.openFilesMap);
@@ -164,7 +165,7 @@ export class FileInvocationHandler {
         ipcEvent.sender.send(
           InvokeEvent.FileProcessing,
           Status.Error,
-          `The file ${file.name} is already opened`
+          `The file ${path.basename(viewPath)} is already opened`
         );
         return;
       }
@@ -176,7 +177,6 @@ export class FileInvocationHandler {
         directories
       );
 
-      let viewPath = this.fileShare.getTempPath(file.name.split(".txt")[0]); // to view the file
       let key = configuration.privateKey;
       let decrypted = this.fileShare.decryptFile(fileData.toString(), key);
 
@@ -228,10 +228,11 @@ export class FileInvocationHandler {
     } catch (error: any) {
       console.log(error);
       this.loadingHandler(ipcEvent, false);
+      this.openFilesMap.delete(file.name);
       ipcEvent.sender.send(
         InvokeEvent.FileProcessing,
         Status.Error,
-        error?.details?.message || "An error occurred while opening the file"
+        JSON.stringify(error)
       );
     }
   };
