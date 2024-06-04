@@ -8,6 +8,7 @@ import mime from "mime";
 import { AES, enc } from "crypto-ts";
 import { shell } from "electron";
 import {
+  ShareDirectoryClient,
   ShareServiceClient,
   StorageSharedKeyCredential,
 } from "@azure/storage-file-share";
@@ -94,7 +95,9 @@ export class FileShare {
     const shareClient = serviceClient
       .getShareClient(shareName)
       .getDirectoryClient(directoryName);
-    let iter = shareClient.listFilesAndDirectories();
+    let iter = shareClient.listFilesAndDirectories({
+      includeTimestamps: true,
+    });
     const fileList = [];
     for await (const item of iter) {
       fileList.push(item);
@@ -322,6 +325,22 @@ export class FileShare {
       readableStream?.on("error", reject);
     });
   }
+
+  private getProperty = async (
+    shareClient: ShareDirectoryClient,
+    file: any
+  ) => {
+    let property;
+    if (file.kind === "file") {
+      const fileClient = shareClient.getFileClient(file.name);
+      property = await fileClient.getProperties();
+    } else {
+      const directoryClient = shareClient.getDirectoryClient(file.name);
+      property = await directoryClient.getProperties();
+    }
+    return property;
+  };
+
   public static getInstance = () => {
     return new FileShare();
   };

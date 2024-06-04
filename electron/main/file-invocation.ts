@@ -159,7 +159,6 @@ export class FileInvocationHandler {
       }
       let viewPath = this.fileShare.getTempPath(file.name.split(".txt")[0]); // to view the file
       if (this.openFilesMap.has(file.name)) {
-        console.log("file is already opened", this.openFilesMap);
         this.loadingHandler(ipcEvent, false);
         ipcEvent.sender.send(
           InvokeEvent.FileProcessing,
@@ -205,9 +204,7 @@ export class FileInvocationHandler {
           .catch(() => false);
         this.openFilesMap.set(file.name, "Opened");
 
-        console.log(isFileOpen, "isFileOpen");
         if (!isFileOpen) {
-          console.log("isEditable", isEditable);
           if (isEditable) {
             await this.saveAndUpload(
               ipcEvent,
@@ -219,9 +216,9 @@ export class FileInvocationHandler {
           }
           this.fileShare.removeFileFromTempPath(viewPath);
           clearInterval(intervalId);
+          ipcEvent.sender.send(InvokeEvent.TryFetch, "");
           this.loadingHandler(ipcEvent, false);
           this.openFilesMap.delete(file.name);
-          console.log("#############################");
         }
       }, 5000);
     } catch (error: any) {

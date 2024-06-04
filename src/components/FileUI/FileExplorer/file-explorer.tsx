@@ -17,12 +17,12 @@ import { Card, CardContent, IconButton, Typography } from "@mui/material";
 import Menu from "@mui/material/Menu";
 import MenuItem from "@mui/material/MenuItem";
 import SettingsComponent from "../Settings/settings";
+import dayjs from "dayjs";
+
 interface File {
   kind: string;
   name: string;
-  properties: {
-    contentLength: number;
-  };
+  properties: any;
 }
 
 interface Props {
@@ -203,6 +203,11 @@ const FileExplorer: React.FC<Props> = ({ files }) => {
       return (contentLength / (1024 * 1024)).toFixed(2) + " MB";
     }
   }
+
+  function formatDate(date: string): string {
+    return dayjs(date).format("DD/MM/YY hh:mm:ss A");
+  }
+
   function CreateFolderModal() {
     return (
       <Modal
@@ -382,6 +387,7 @@ const FileExplorer: React.FC<Props> = ({ files }) => {
                 <TableCell>Name</TableCell>
                 <TableCell>Type</TableCell>
                 <TableCell>Size</TableCell>
+                <TableCell>Last Modified</TableCell>
                 <TableCell></TableCell>
               </TableRow>
             </TableHead>
@@ -422,6 +428,11 @@ const FileExplorer: React.FC<Props> = ({ files }) => {
                   <TableCell>
                     {row.kind === "file" &&
                       convertContentLength(row.properties.contentLength)}
+                  </TableCell>
+                  <TableCell>
+                    {formatDate(
+                      row.properties.lastModified || row.properties.createdOn
+                    )}
                   </TableCell>
                   <TableCell
                     className="cursor-pointer"
