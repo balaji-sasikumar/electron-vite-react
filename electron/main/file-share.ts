@@ -207,7 +207,6 @@ export class FileShare {
 
   removeFileFromTempPath = (filePath: string) => {
     try {
-      console.log("Removing file from temp path:", filePath);
       fs.unlinkSync(filePath);
     } catch (err) {
       console.error("Error removing file:", err);
