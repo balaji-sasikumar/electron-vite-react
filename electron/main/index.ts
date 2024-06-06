@@ -3,6 +3,7 @@ import { release } from "node:os";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { fileInvocation } from "./file-invocation";
+import { logError } from "./logger";
 
 globalThis.__filename = fileURLToPath(import.meta.url);
 globalThis.__dirname = dirname(__filename);
@@ -112,12 +113,14 @@ ipcMain.handle("open-win", (_, arg) => {
   }
 });
 
-// process.on("uncaughtException", (error) => {
-//   console.error("Uncaught Exception:", error);
-//   app.quit();
-// });
+process.on("uncaughtException", (error) => {
+  console.error("Uncaught Exception:", error);
+  logError(`Uncaught Exception -- ${JSON.stringify(error)}`);
+  app.quit();
+});
 
-// process.on("unhandledRejection", (error) => {
-//   console.error("Unhandled Rejection:", error);
-//   app.quit();
-// });
+process.on("unhandledRejection", (error) => {
+  console.error("Unhandled Rejection:", error);
+  logError(`Unhandled Exception -- ${JSON.stringify(error)}`);
+  app.quit();
+});
