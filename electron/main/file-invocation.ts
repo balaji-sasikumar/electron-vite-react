@@ -97,7 +97,8 @@ export class FileInvocationHandler {
       configuration = JSON.parse(configuration);
 
       let selectedPath = filePaths.filePaths[0];
-      let toPath = this.fileShare.getTempPath(
+      let toPath = this.fileShare.getSharedStoragePath(
+        configuration.tempPath,
         path.basename(selectedPath) + ".txt"
       );
 
@@ -157,7 +158,10 @@ export class FileInvocationHandler {
         this.loadingHandler(ipcEvent, false);
         return;
       }
-      let viewPath = this.fileShare.getTempPath(file.name.split(".txt")[0]); // to view the file
+      let viewPath = this.fileShare.getSharedStoragePath(
+        configuration.tempPath,
+        file.name.split(".txt")[0]
+      );
       if (this.openFilesMap.has(file.name)) {
         this.loadingHandler(ipcEvent, false);
         ipcEvent.sender.send(
@@ -203,6 +207,7 @@ export class FileInvocationHandler {
           .isFileOpened(paths)
           .catch(() => false);
         this.openFilesMap.set(file.name, "Opened");
+        console.log("isFileOpen", isFileOpen);
 
         if (!isFileOpen) {
           if (isEditable) {
