@@ -50,6 +50,8 @@ async function createWindow() {
       // contextIsolation: false,
     },
   });
+  win.maximize();
+  win.removeMenu();
   if (url) {
     // electron-vite-vue#298
     win.loadURL(url);
@@ -73,7 +75,6 @@ async function createWindow() {
 }
 
 app.whenReady().then(createWindow);
-
 app.on("window-all-closed", () => {
   win = null;
   if (process.platform !== "darwin") app.quit();
