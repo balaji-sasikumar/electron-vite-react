@@ -16,6 +16,8 @@ import AlertDialog from "../Dialog/dialog";
 import { Card, CardContent, IconButton, Typography } from "@mui/material";
 import Menu from "@mui/material/Menu";
 import MenuItem from "@mui/material/MenuItem";
+import Breadcrumbs from "@mui/material/Breadcrumbs";
+import Link from "@mui/material/Link";
 import SettingsComponent from "../Settings/settings";
 import dayjs from "dayjs";
 
@@ -42,6 +44,7 @@ const FileExplorer: React.FC<Props> = ({ files }) => {
   const [currentDirectory, setCurrentDirectory] = useState<string>(
     (localStorage.getItem("directories") || "").split("/").pop() || ""
   );
+  const [breadcrumbs, setBreadcrumbs] = useState<string[]>([]);
   const [anchorEl, setAnchorEl] = React.useState<null | HTMLElement>(null);
   const open = Boolean(anchorEl);
   const handleMenuClick = (event: React.MouseEvent<HTMLElement>) => {
@@ -73,6 +76,9 @@ const FileExplorer: React.FC<Props> = ({ files }) => {
   };
   useEffect(() => {
     setShowOptions(navigator.onLine);
+    setBreadcrumbs(
+      (localStorage.getItem("directories") || "").split("/").filter((x) => x)
+    );
     window.ipcRenderer.on(InvokeEvent.TryFetch, async (event) => {
       refresh();
     });
@@ -208,6 +214,42 @@ const FileExplorer: React.FC<Props> = ({ files }) => {
     return dayjs(date).format("DD/MM/YY hh:mm:ss A");
   }
 
+  function BreadcrumbsComponent() {
+    return (
+      <div role="presentation">
+        <Breadcrumbs aria-label="breadcrumb">
+          <Link
+            underline="hover"
+            color={breadcrumbs.length === 0 ? "textPrimary" : "inherit"}
+          >
+            Home
+          </Link>
+          {breadcrumbs?.map((dir, index) => {
+            return (
+              <Link
+                underline="hover"
+                color={
+                  index === breadcrumbs.length - 1 ? "textPrimary" : "inherit"
+                }
+                onClick={() => {
+                  let directories = localStorage.getItem("directories") || "";
+                  const dirs = directories.split("/");
+                  dirs.splice(index + 1, dirs.length - index - 1);
+                  directories = dirs.join("/");
+                  setCurrentDirectory(dirs[dirs.length - 1]);
+                  localStorage.setItem("directories", directories);
+                  refresh();
+                }}
+              >
+                {dir}
+              </Link>
+            );
+          })}
+        </Breadcrumbs>
+      </div>
+    );
+  }
+
   function CreateFolderModal() {
     return (
       <Modal
@@ -309,7 +351,7 @@ const FileExplorer: React.FC<Props> = ({ files }) => {
               chevron_left
             </IconButton>
           )}
-          <span className="folder">{currentDirectory || "Home"}</span>
+          <BreadcrumbsComponent />
         </div>
         <div className="ml-auto flex justify-end gap-3">
           <Button
