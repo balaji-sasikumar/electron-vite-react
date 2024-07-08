@@ -70,6 +70,7 @@ export class FileShare {
       const base64Data = this.convertFileToBase64(fromPath);
       const dataURL = `data:${mime.getType(toPath)};base64,${base64Data}`;
       const encrypted = this.encryptFile(dataURL, key);
+      fs.mkdirSync(path.dirname(toPath), { recursive: true });
       fs.writeFileSync(toPath, encrypted);
     } catch (err) {
       console.error("Error writing file:", err);
