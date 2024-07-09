@@ -243,6 +243,19 @@ export class FileInvocationHandler {
   ) => {
     ipcEvent.sender.send(InvokeEvent.Loading, loading);
   };
+  getDirectoryTreeHandler = async (
+    ipcEvent: Electron.IpcMainInvokeEvent,
+    configuration: any,
+    folderPath: string
+  ) => {
+    configuration = JSON.parse(configuration);
+    const res = await this.fileShare.getDirectoryTree(
+      configuration,
+      folderPath
+    );
+    ipcEvent.sender.send(InvokeEvent.GetDirectoryTreeResponse, res);
+  };
+
   private saveAndUpload = async (
     ipcEvent: Electron.IpcMainInvokeEvent,
     file: { name: any },
@@ -309,4 +322,8 @@ export function fileInvocation(win: Electron.BrowserWindow) {
     fileInvocationHandler.openFileInvocation
   );
   ipcMain.handle(InvokeEvent.Loading, fileInvocationHandler.loadingHandler);
+  ipcMain.handle(
+    InvokeEvent.GetDirectoryTree,
+    fileInvocationHandler.getDirectoryTreeHandler
+  );
 }

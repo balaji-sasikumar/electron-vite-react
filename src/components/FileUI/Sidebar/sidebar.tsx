@@ -1,9 +1,8 @@
 import React, { useEffect, useState } from "react";
 import Box from "@mui/material/Box";
-import { TreeViewBaseItem, TreeViewItemId } from "@mui/x-tree-view/models";
+import { TreeViewBaseItem } from "@mui/x-tree-view/models";
 import { RichTreeView } from "@mui/x-tree-view/RichTreeView";
-import { SimpleTreeView, TreeItem } from "@mui/x-tree-view";
-import { List, ListItem } from "@mui/material";
+import { InvokeEvent } from "@/enums/invoke-event.enum";
 
 interface File {
   kind: string;
@@ -17,106 +16,58 @@ interface Props {
   openFile: (file: File) => void;
 }
 
-// const Sidebar: React.FC<Props> = ({ files, openFile }) => {
-//   const [directories, setDirectories] = useState<File[]>([]);
-//   useEffect(() => {
-//     const directories = files.filter((file) => file.kind === "directory");
-//     setDirectories(directories);
-//   }, [files]);
-
-//   const list = () => (
-//     <div className="p-2">
-//       <Box sx={{ minHeight: 352, minWidth: 250 }}>
-//         <SimpleTreeView>
-//           {directories.map((directory, index) => (
-//             <List key={index}>
-//               <ListItem
-//                 className="flex items-center content-center gap-2 text-sm"
-//                 onClick={() => openFile(directory)}
-//               >
-//                 <span className="material-symbols-outlined material-symbols-fill text-yellow-400 max-w-6 max-h-6">
-//                   folder_open
-//                 </span>
-//                 {directory.name}
-//               </ListItem>
-//             </List>
-//           ))}
-//         </SimpleTreeView>
-//       </Box>
-//     </div>
-//   );
-
-//   return <div className="w-64">{list()}</div>;
-// };
-
-// export default Sidebar;
-
 const Sidebar: React.FC<Props> = ({ files, openFile }) => {
-  const [selected, setSelected] = useState<string | null>(null);
   const [directoryTree, setDirectoryTree] = useState<TreeViewBaseItem[]>([]);
   const [expandedItems, setExpandedItems] = useState<string[]>([]);
+  const findExpandedItems = (items: any[]): string[] => {
+    let expanded: string[] = [];
 
+    for (const item of items) {
+      if (item.children.length > 0) {
+        expanded.push(item.id);
+        expanded = [...expanded, ...findExpandedItems(item.children)];
+      }
+    }
+
+    return expanded;
+  };
+
+  const getSelectedDirectory = (id: string, items: any[]): any => {
+    for (const item of items) {
+      if (item.id === id) {
+        return item;
+      }
+
+      if (item.children.length > 0) {
+        const selectedDirectory = getSelectedDirectory(id, item.children);
+        if (selectedDirectory) {
+          return selectedDirectory;
+        }
+      }
+    }
+  };
   useEffect(() => {
     const directories = localStorage.getItem("directories");
-    if (!directories) {
-      const newTree = convertToDirectoryTree(files);
-      console.log(newTree, "Converted to directory tree");
-      setDirectoryTree(newTree);
-    } else {
-      const updatedTree = appendToDirectoryTree(selected, directoryTree, files);
-      console.log(updatedTree, "Appended to directory tree");
-      setDirectoryTree(updatedTree);
-    }
+    (async () => {
+      await window.ipcRenderer.invoke(
+        InvokeEvent.GetDirectoryTree,
+        localStorage.getItem("configuration"),
+        directories
+      );
+    })();
+
+    window.ipcRenderer.on(
+      InvokeEvent.GetDirectoryTreeResponse,
+      (event, tree) => {
+        setDirectoryTree(tree);
+      }
+    );
   }, [files]);
 
   useEffect(() => {
-    console.log(directoryTree, "directoryTree useeffect");
+    console.log(directoryTree);
+    setExpandedItems(findExpandedItems(directoryTree));
   }, [directoryTree]);
-
-  const convertToDirectoryTree = (files: File[]) => {
-    const directories = files.filter((file) => file.kind === "directory");
-    const directoryTree = directories.map((directory) => ({
-      id: directory.fileId,
-      label: directory.name,
-      children: [],
-    }));
-    return directoryTree;
-  };
-
-  const appendToDirectoryTree = (
-    selected: string | null,
-    directoryTree: TreeViewBaseItem[],
-    files: File[]
-  ) => {
-    const childDirectories = files.filter((file) => file.kind === "directory");
-
-    const appendChildren = (tree: TreeViewBaseItem[]): TreeViewBaseItem[] => {
-      return tree.map((directory) => {
-        if (directory.id === selected) {
-          return {
-            ...directory,
-            children: [
-              ...(directory.children || []),
-              ...childDirectories.map((dir) => ({
-                id: dir.fileId,
-                label: dir.name,
-                children: [],
-              })),
-            ],
-          };
-        } else if (directory.children && directory.children.length > 0) {
-          return {
-            ...directory,
-            children: appendChildren(directory.children),
-          };
-        } else {
-          return { ...directory, children: directory.children || [] };
-        }
-      });
-    };
-
-    return appendChildren(directoryTree);
-  };
 
   const folderIcon = () => (
     <span className="material-symbols-outlined material-symbols-fill text-yellow-400 max-w-6 max-h-6">
@@ -135,44 +86,24 @@ const Sidebar: React.FC<Props> = ({ files, openFile }) => {
           collapseIcon: folderIcon,
         }}
         onSelectedItemsChange={(event, selectedItems) => {
-          setSelected(selectedItems);
           setExpandedItems([...expandedItems, selectedItems]);
-          const directory: any = files.find(
-            (file) => file.fileId === selectedItems
+          const directory: any = getSelectedDirectory(
+            selectedItems as string,
+            directoryTree
           );
+          let directories = localStorage.getItem("directories") || "";
+          const dirs = directories.split("/");
+          dirs.splice(directory.level, dirs.length);
+          directories = dirs.join("/");
+          localStorage.setItem("directories", directories);
           openFile({
             kind: "directory",
-            name: directory.name,
+            name: directory.label,
             properties: {},
-            fileId: directory.fileId,
+            fileId: directory.id,
           });
         }}
       />
-      {/* <SimpleTreeView
-        slots={{
-          expandIcon: folderIcon,
-          endIcon: folderIcon,
-        }}
-        expandedItems={expandedItems}
-      >
-        {directoryTree.map((directory, index) => (
-          <TreeItem
-            key={index}
-            label={directory.label}
-            itemId={directory.id}
-            onClick={() => {
-              setSelected(directory.id);
-              setExpandedItems([...expandedItems, directory.id]);
-              openFile({
-                kind: "directory",
-                name: directory.label,
-                properties: {},
-                fileId: directory.id,
-              });
-            }}
-          ></TreeItem>
-        ))}
-      </SimpleTreeView> */}
     </Box>
   );
 };

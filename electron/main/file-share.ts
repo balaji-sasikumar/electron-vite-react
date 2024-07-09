@@ -20,7 +20,11 @@ import {
 } from "./utils";
 import * as zlib from "zlib";
 import { Configuration } from "electron/interfaces/configuration.interface";
-
+interface DirectoryItem {
+  label: string;
+  id?: string;
+  children?: DirectoryItem[];
+}
 export class FileShare {
   private constructor() {}
   isFileOpened = async (paths: string[]): Promise<boolean> => {
@@ -104,6 +108,61 @@ export class FileShare {
       fileList.push(item);
     }
     return fileList;
+  };
+
+  getDirectoryTree = async (
+    configuration: Configuration,
+    folderPath: string
+  ): Promise<DirectoryItem[]> => {
+    const { accountName: account, accountKey, shareName } = configuration;
+    const credential = new StorageSharedKeyCredential(account, accountKey);
+    const serviceClient = new ShareServiceClient(
+      `https://${account}.file.core.windows.net`,
+      credential
+    );
+    const shareClient = serviceClient.getShareClient(shareName);
+    let level = 0;
+
+    const fetchDirectoryContents = async (
+      directoryPath: string
+    ): Promise<DirectoryItem[]> => {
+      console.log(directoryPath, "Directory path");
+      const directoryClient = shareClient.getDirectoryClient(directoryPath);
+      const iter = directoryClient.listFilesAndDirectories({
+        includeTimestamps: true,
+      });
+      const items: DirectoryItem[] = [];
+
+      for await (const item of iter) {
+        if (item.kind === "directory") {
+          items.push({
+            label: item.name,
+            id: item.fileId,
+            children: [],
+            level: level,
+          });
+        }
+      }
+      level++;
+      return items;
+    };
+
+    const paths = folderPath.split("/");
+    let rootContents: DirectoryItem[] = await fetchDirectoryContents("");
+    let currentLevel = rootContents;
+    let path = "";
+    for (let pathSegment of paths) {
+      const parentDir = currentLevel.find((dir) => dir.label === pathSegment);
+      path = path ? `${path}/${pathSegment}` : pathSegment;
+      if (parentDir) {
+        parentDir.children = await fetchDirectoryContents(path);
+        currentLevel = parentDir.children;
+      } else {
+        console.log(`Directory ${pathSegment} not found`);
+        break;
+      }
+    }
+    return rootContents;
   };
 
   downloadFile = async (

@@ -229,6 +229,7 @@ const FileExplorer: React.FC<Props> = ({ files }) => {
               setCurrentDirectory("");
               refresh();
             }}
+            key={"home"}
           >
             Home
           </Link>

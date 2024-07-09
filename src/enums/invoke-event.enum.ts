@@ -9,4 +9,6 @@ export enum InvokeEvent {
   GetFileResponse = "get-file-response",
   TryFetch = "try-fetch",
   Loading = "loading",
+  GetDirectoryTree = "get-directory-tree",
+  GetDirectoryTreeResponse = "get-directory-tree-response",
 }
