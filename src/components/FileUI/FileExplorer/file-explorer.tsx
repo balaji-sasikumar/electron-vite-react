@@ -20,11 +20,13 @@ import Breadcrumbs from "@mui/material/Breadcrumbs";
 import Link from "@mui/material/Link";
 import SettingsComponent from "../Settings/settings";
 import dayjs from "dayjs";
+import SideBar from "../Sidebar/sidebar";
 
 interface File {
   kind: string;
   name: string;
   properties: any;
+  fileId: string;
 }
 
 interface Props {
@@ -82,7 +84,6 @@ const FileExplorer: React.FC<Props> = ({ files }) => {
     window.ipcRenderer.on(InvokeEvent.TryFetch, async (event) => {
       refresh();
     });
-
     return () => {
       window.ipcRenderer.off(InvokeEvent.TryFetch, () => {});
     };
@@ -214,6 +215,8 @@ const FileExplorer: React.FC<Props> = ({ files }) => {
     return dayjs(date).format("DD/MM/YY hh:mm:ss A");
   }
 
+  const getConfigurations = () => localStorage.getItem("configuration");
+
   function BreadcrumbsComponent({ breadcrumbs }: { breadcrumbs: string[] }) {
     return (
       <div role="presentation">
@@ -323,179 +326,182 @@ const FileExplorer: React.FC<Props> = ({ files }) => {
       </Card>
     );
   }
-  const getConfigurations = () => localStorage.getItem("configuration");
 
+  function RowComponent(row: any, isRestricted: boolean = true) {
+    if (isRestricted && row.kind === "directory") {
+      return null;
+    }
+    return (
+      <TableRow
+        key={row.name}
+        sx={{ "&:last-child td, &:last-child th": { border: 0 } }}
+      >
+        <TableCell
+          component="th"
+          scope="row"
+          onClick={() => {
+            openFile(row);
+          }}
+          className="cursor-pointer"
+        >
+          <div className="flex items-center gap-4">
+            {row.kind === "directory" ? (
+              <span className="material-symbols-outlined material-symbols-fill text-yellow-400 max-w-6 max-h-6">
+                folder_open
+              </span>
+            ) : (
+              <span
+                className={`${row.name
+                  .split(".")?.[1]
+                  .toLowerCase()} max-w-6 max-h-6`}
+              ></span>
+            )}
+            {row.kind === "file" ? row.name.split(".txt")?.[0] : row.name}
+          </div>
+        </TableCell>
+        <TableCell>
+          {row.kind.charAt(0).toUpperCase() + row.kind.slice(1)}
+        </TableCell>
+        <TableCell>
+          {row.kind === "file" &&
+            convertContentLength(row.properties.contentLength)}
+        </TableCell>
+        <TableCell>
+          {formatDate(row.properties.lastModified || row.properties.createdOn)}
+        </TableCell>
+        <TableCell className="cursor-pointer" onClick={() => deleteDialog(row)}>
+          <span className="material-symbols-outlined font-extralight">
+            delete
+          </span>
+        </TableCell>
+      </TableRow>
+    );
+  }
   return (
-    <>
-      <SettingsComponent
-        open={settingsModalOpen}
-        onClose={() => {
-          setSettingsModalOpen(false);
-        }}
-      />
-      <AlertDialog
-        open={modalOpen}
-        onClose={modalBtn.onCancel || (() => {})}
-        onOk={modalBtn.onOk || (() => {})}
-        title={title}
-        message={message}
-        showCancel={true}
-        okText="Delete"
-      />
-      {CreateFolderModal()}
-      <div className="flex my-3 sticky top-0 px-2 py-4 bg-white z-10 shadow-md">
-        <div className="flex items-center justify-center">
-          {currentDirectory && (
-            <IconButton
-              className="material-symbols-outlined  cursor-pointer"
-              onClick={() => {
-                goBack();
-              }}
+    <div className="flex flex-row">
+      <SideBar files={files} openFile={openFile} />
+      <div className="grow">
+        <SettingsComponent
+          open={settingsModalOpen}
+          onClose={() => {
+            setSettingsModalOpen(false);
+          }}
+        />
+        <AlertDialog
+          open={modalOpen}
+          onClose={modalBtn.onCancel || (() => {})}
+          onOk={modalBtn.onOk || (() => {})}
+          title={title}
+          message={message}
+          showCancel={true}
+          okText="Delete"
+        />
+        {CreateFolderModal()}
+        <div className="flex my-3 sticky top-0 px-2 py-4 bg-white z-10 shadow-md">
+          <div className="flex items-center justify-center">
+            {currentDirectory && (
+              <IconButton
+                className="material-symbols-outlined  cursor-pointer"
+                onClick={() => {
+                  goBack();
+                }}
+                disabled={!showOptions}
+              >
+                chevron_left
+              </IconButton>
+            )}
+            <BreadcrumbsComponent breadcrumbs={breadcrumbs} />
+          </div>
+          <div className="ml-auto flex justify-end gap-3">
+            <Button
+              variant="outlined"
+              className="new-folder flex items-center justify-center gap-2 cursor-pointer"
+              onClick={handleOpen}
               disabled={!showOptions}
             >
-              chevron_left
+              <span className="material-symbols-outlined">
+                create_new_folder
+              </span>
+              Add Folder
+            </Button>
+            <Button
+              variant="contained"
+              className="flex items-center justify-center gap-2 cursor-pointer"
+              onClick={uploadFile}
+              disabled={!showOptions}
+            >
+              <span className="material-symbols-outlined">upload_file</span>
+              Upload File
+            </Button>
+            <IconButton
+              onClick={handleMenuClick}
+              className="flex-1"
+              disabled={!showOptions}
+              aria-label="more"
+              id="long-button"
+              aria-controls={open ? "long-menu" : undefined}
+              aria-expanded={open ? "true" : undefined}
+              aria-haspopup="true"
+            >
+              <span className="material-symbols-outlined">more_vert</span>
             </IconButton>
-          )}
-          <BreadcrumbsComponent breadcrumbs={breadcrumbs} />
-        </div>
-        <div className="ml-auto flex justify-end gap-3">
-          <Button
-            variant="outlined"
-            className="new-folder flex items-center justify-center gap-2 cursor-pointer"
-            onClick={handleOpen}
-            disabled={!showOptions}
-          >
-            <span className="material-symbols-outlined">create_new_folder</span>
-            Add Folder
-          </Button>
-          <Button
-            variant="contained"
-            className="flex items-center justify-center gap-2 cursor-pointer"
-            onClick={uploadFile}
-            disabled={!showOptions}
-          >
-            <span className="material-symbols-outlined">upload_file</span>
-            Upload File
-          </Button>
-          <IconButton
-            onClick={handleMenuClick}
-            className="flex-1"
-            disabled={!showOptions}
-            aria-label="more"
-            id="long-button"
-            aria-controls={open ? "long-menu" : undefined}
-            aria-expanded={open ? "true" : undefined}
-            aria-haspopup="true"
-          >
-            <span className="material-symbols-outlined">more_vert</span>
-          </IconButton>
-          <Menu
-            id="long-menu"
-            MenuListProps={{
-              "aria-labelledby": "long-button",
-            }}
-            anchorEl={anchorEl}
-            open={open}
-            onClose={() => {
-              setAnchorEl(null);
-            }}
-          >
-            <MenuItem
-              onClick={() => {
-                localStorage.clear();
-                window.location.reload();
+            <Menu
+              id="long-menu"
+              MenuListProps={{
+                "aria-labelledby": "long-button",
+              }}
+              anchorEl={anchorEl}
+              open={open}
+              onClose={() => {
                 setAnchorEl(null);
               }}
-              className="flex items-center gap-2"
             >
-              <span className="material-symbols-outlined">mop</span>
-              Clear
-            </MenuItem>
-            <MenuItem
-              onClick={() => {
-                setSettingsModalOpen(true);
-                setAnchorEl(null);
-              }}
-              className="flex items-center gap-2"
-            >
-              <span className="material-symbols-outlined">settings</span>
-              Configure
-            </MenuItem>
-          </Menu>
+              <MenuItem
+                onClick={() => {
+                  localStorage.clear();
+                  window.location.reload();
+                  setAnchorEl(null);
+                }}
+                className="flex items-center gap-2"
+              >
+                <span className="material-symbols-outlined">mop</span>
+                Clear
+              </MenuItem>
+              <MenuItem
+                onClick={() => {
+                  setSettingsModalOpen(true);
+                  setAnchorEl(null);
+                }}
+                className="flex items-center gap-2"
+              >
+                <span className="material-symbols-outlined">settings</span>
+                Configure
+              </MenuItem>
+            </Menu>
+          </div>
         </div>
-      </div>
-      {files.length == 0 ? (
-        NoContentsComponent()
-      ) : (
-        <TableContainer component={Paper}>
-          <Table stickyHeader aria-label="sticky table">
-            <TableHead>
-              <TableRow>
-                <TableCell>Name</TableCell>
-                <TableCell>Type</TableCell>
-                <TableCell>Size</TableCell>
-                <TableCell>Last Modified</TableCell>
-                <TableCell></TableCell>
-              </TableRow>
-            </TableHead>
-            <TableBody>
-              {files.map((row: any) => (
-                <TableRow
-                  key={row.name}
-                  sx={{ "&:last-child td, &:last-child th": { border: 0 } }}
-                >
-                  <TableCell
-                    component="th"
-                    scope="row"
-                    onClick={() => {
-                      openFile(row);
-                    }}
-                    className="cursor-pointer"
-                  >
-                    <div className="flex items-center gap-4">
-                      {row.kind === "directory" ? (
-                        <span className="material-symbols-outlined material-symbols-fill text-yellow-400 max-w-6 max-h-6">
-                          folder_open
-                        </span>
-                      ) : (
-                        <span
-                          className={`${row.name
-                            .split(".")?.[1]
-                            .toLowerCase()} max-w-6 max-h-6`}
-                        ></span>
-                      )}
-                      {row.kind === "file"
-                        ? row.name.split(".txt")?.[0]
-                        : row.name}
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    {row.kind.charAt(0).toUpperCase() + row.kind.slice(1)}
-                  </TableCell>
-                  <TableCell>
-                    {row.kind === "file" &&
-                      convertContentLength(row.properties.contentLength)}
-                  </TableCell>
-                  <TableCell>
-                    {formatDate(
-                      row.properties.lastModified || row.properties.createdOn
-                    )}
-                  </TableCell>
-                  <TableCell
-                    className="cursor-pointer"
-                    onClick={() => deleteDialog(row)}
-                  >
-                    <span className="material-symbols-outlined font-extralight">
-                      delete
-                    </span>
-                  </TableCell>
+        {files.length == 0 ? (
+          NoContentsComponent()
+        ) : (
+          <TableContainer component={Paper}>
+            <Table stickyHeader aria-label="sticky table">
+              <TableHead>
+                <TableRow>
+                  <TableCell>Name</TableCell>
+                  <TableCell>Type</TableCell>
+                  <TableCell>Size</TableCell>
+                  <TableCell>Last Modified</TableCell>
+                  <TableCell></TableCell>
                 </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </TableContainer>
-      )}
-    </>
+              </TableHead>
+              <TableBody>
+                {files.map((row: any) => RowComponent(row))}
+              </TableBody>
+            </Table>
+          </TableContainer>
+        )}
+      </div>
+    </div>
   );
 };
 

@@ -23,6 +23,7 @@
     "@emotion/react": "^11.11.4",
     "@emotion/styled": "^11.11.5",
     "@mui/material": "^5.15.15",
+    "@mui/x-tree-view": "^7.9.0",
     "@ronomon/opened": "^1.5.2",
     "chokidar": "^3.6.0",
     "crypto-ts": "^1.0.2",

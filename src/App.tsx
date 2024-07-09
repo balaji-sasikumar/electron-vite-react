@@ -17,6 +17,7 @@ interface File {
   properties: {
     contentLength: number;
   };
+  fileId: string;
 }
 function SlideTransition(props: SlideProps) {
   return <Slide {...props} direction="up" />;
