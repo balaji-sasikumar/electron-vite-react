@@ -214,13 +214,18 @@ const FileExplorer: React.FC<Props> = ({ files }) => {
     return dayjs(date).format("DD/MM/YY hh:mm:ss A");
   }
 
-  function BreadcrumbsComponent() {
+  function BreadcrumbsComponent({ breadcrumbs }: { breadcrumbs: string[] }) {
     return (
       <div role="presentation">
         <Breadcrumbs aria-label="breadcrumb">
           <Link
             underline="hover"
             color={breadcrumbs.length === 0 ? "textPrimary" : "inherit"}
+            onClick={() => {
+              localStorage.setItem("directories", "");
+              setCurrentDirectory("");
+              refresh();
+            }}
           >
             Home
           </Link>
@@ -351,7 +356,7 @@ const FileExplorer: React.FC<Props> = ({ files }) => {
               chevron_left
             </IconButton>
           )}
-          <BreadcrumbsComponent />
+          <BreadcrumbsComponent breadcrumbs={breadcrumbs} />
         </div>
         <div className="ml-auto flex justify-end gap-3">
           <Button
