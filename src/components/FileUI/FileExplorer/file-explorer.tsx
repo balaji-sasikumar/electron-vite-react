@@ -21,13 +21,7 @@ import Link from "@mui/material/Link";
 import SettingsComponent from "../Settings/settings";
 import dayjs from "dayjs";
 import SideBar from "../Sidebar/sidebar";
-
-interface File {
-  kind: string;
-  name: string;
-  properties: any;
-  fileId: string;
-}
+import { File } from "../../../../electron/interfaces/file.interface";
 
 interface Props {
   files: File[];
@@ -282,6 +276,9 @@ const FileExplorer: React.FC<Props> = ({ files }) => {
                   createFolder();
                 }
               }}
+              inputProps={{
+                maxLength: 30,
+              }}
             />
             <div className="flex flex-row gap-3">
               <Button
@@ -329,9 +326,6 @@ const FileExplorer: React.FC<Props> = ({ files }) => {
   }
 
   function RowComponent(row: any, isRestricted: boolean = true) {
-    if (isRestricted && row.kind === "directory") {
-      return null;
-    }
     return (
       <TableRow
         key={row.name}
@@ -379,128 +373,132 @@ const FileExplorer: React.FC<Props> = ({ files }) => {
     );
   }
   return (
-    <div className="flex flex-row">
-      <SideBar files={files} openFile={openFile} />
-      <div className="grow">
-        <SettingsComponent
-          open={settingsModalOpen}
-          onClose={() => {
-            setSettingsModalOpen(false);
-          }}
-        />
-        <AlertDialog
-          open={modalOpen}
-          onClose={modalBtn.onCancel || (() => {})}
-          onOk={modalBtn.onOk || (() => {})}
-          title={title}
-          message={message}
-          showCancel={true}
-          okText="Delete"
-        />
-        {CreateFolderModal()}
-        <div className="flex my-3 sticky top-0 px-2 py-4 bg-white z-10 shadow-md">
-          <div className="flex items-center justify-center">
-            {currentDirectory && (
-              <IconButton
-                className="material-symbols-outlined  cursor-pointer"
-                onClick={() => {
-                  goBack();
-                }}
-                disabled={!showOptions}
-              >
-                chevron_left
-              </IconButton>
-            )}
-            <BreadcrumbsComponent breadcrumbs={breadcrumbs} />
-          </div>
-          <div className="ml-auto flex justify-end gap-3">
-            <Button
-              variant="outlined"
-              className="new-folder flex items-center justify-center gap-2 cursor-pointer"
-              onClick={handleOpen}
-              disabled={!showOptions}
-            >
-              <span className="material-symbols-outlined">
-                create_new_folder
-              </span>
-              Add Folder
-            </Button>
-            <Button
-              variant="contained"
-              className="flex items-center justify-center gap-2 cursor-pointer"
-              onClick={uploadFile}
-              disabled={!showOptions}
-            >
-              <span className="material-symbols-outlined">upload_file</span>
-              Upload File
-            </Button>
+    <div>
+      <SettingsComponent
+        open={settingsModalOpen}
+        onClose={() => {
+          setSettingsModalOpen(false);
+        }}
+      />
+      <AlertDialog
+        open={modalOpen}
+        onClose={modalBtn.onCancel || (() => {})}
+        onOk={modalBtn.onOk || (() => {})}
+        title={title}
+        message={message}
+        showCancel={true}
+        okText="Delete"
+      />
+      {CreateFolderModal()}
+      <div className="flex my-3 sticky top-0 px-2 py-4 bg-white z-10 shadow-md">
+        <div className="flex items-center justify-center">
+          {currentDirectory && (
             <IconButton
-              onClick={handleMenuClick}
-              className="flex-1"
-              disabled={!showOptions}
-              aria-label="more"
-              id="long-button"
-              aria-controls={open ? "long-menu" : undefined}
-              aria-expanded={open ? "true" : undefined}
-              aria-haspopup="true"
-            >
-              <span className="material-symbols-outlined">more_vert</span>
-            </IconButton>
-            <Menu
-              id="long-menu"
-              MenuListProps={{
-                "aria-labelledby": "long-button",
+              className="material-symbols-outlined  cursor-pointer"
+              onClick={() => {
+                goBack();
               }}
-              anchorEl={anchorEl}
-              open={open}
-              onClose={() => {
+              disabled={!showOptions}
+            >
+              chevron_left
+            </IconButton>
+          )}
+          <BreadcrumbsComponent breadcrumbs={breadcrumbs} />
+        </div>
+        <div className="ml-auto flex justify-end gap-3">
+          <Button
+            variant="outlined"
+            className="new-folder flex items-center justify-center gap-2 cursor-pointer"
+            onClick={handleOpen}
+            disabled={!showOptions}
+          >
+            <span className="material-symbols-outlined">create_new_folder</span>
+            Add Folder
+          </Button>
+          <Button
+            variant="contained"
+            className="flex items-center justify-center gap-2 cursor-pointer"
+            onClick={uploadFile}
+            disabled={!showOptions}
+          >
+            <span className="material-symbols-outlined">upload_file</span>
+            Upload File
+          </Button>
+          <IconButton
+            onClick={handleMenuClick}
+            className="flex-1"
+            disabled={!showOptions}
+            aria-label="more"
+            id="long-button"
+            aria-controls={open ? "long-menu" : undefined}
+            aria-expanded={open ? "true" : undefined}
+            aria-haspopup="true"
+          >
+            <span className="material-symbols-outlined">more_vert</span>
+          </IconButton>
+          <Menu
+            id="long-menu"
+            MenuListProps={{
+              "aria-labelledby": "long-button",
+            }}
+            anchorEl={anchorEl}
+            open={open}
+            onClose={() => {
+              setAnchorEl(null);
+            }}
+          >
+            <MenuItem
+              onClick={() => {
+                localStorage.clear();
+                window.location.reload();
                 setAnchorEl(null);
               }}
+              className="flex items-center gap-2"
             >
-              <MenuItem
-                onClick={() => {
-                  localStorage.clear();
-                  window.location.reload();
-                  setAnchorEl(null);
-                }}
-                className="flex items-center gap-2"
-              >
-                <span className="material-symbols-outlined">mop</span>
-                Clear
-              </MenuItem>
-              <MenuItem
-                onClick={() => {
-                  setSettingsModalOpen(true);
-                  setAnchorEl(null);
-                }}
-                className="flex items-center gap-2"
-              >
-                <span className="material-symbols-outlined">settings</span>
-                Configure
-              </MenuItem>
-            </Menu>
-          </div>
+              <span className="material-symbols-outlined">mop</span>
+              Clear
+            </MenuItem>
+            <MenuItem
+              onClick={() => {
+                setSettingsModalOpen(true);
+                setAnchorEl(null);
+              }}
+              className="flex items-center gap-2"
+            >
+              <span className="material-symbols-outlined">settings</span>
+              Configure
+            </MenuItem>
+          </Menu>
         </div>
-        {files.length == 0 ? (
-          NoContentsComponent()
-        ) : (
-          <TableContainer component={Paper}>
-            <Table stickyHeader aria-label="sticky table">
-              <TableHead>
-                <TableRow>
-                  <TableCell>Name</TableCell>
-                  <TableCell>Type</TableCell>
-                  <TableCell>Size</TableCell>
-                  <TableCell>Last Modified</TableCell>
-                  <TableCell></TableCell>
-                </TableRow>
-              </TableHead>
-              <TableBody>
-                {files.map((row: any) => RowComponent(row))}
-              </TableBody>
-            </Table>
-          </TableContainer>
-        )}
+      </div>
+      <div className="flex flex-row">
+        <SideBar files={files} openFile={openFile} />
+        <div className="grow pl-3">
+          {files.length == 0 ? (
+            NoContentsComponent()
+          ) : (
+            <TableContainer
+              component={Paper}
+              sx={{ maxHeight: "calc(100vh - 7rem)" }}
+              className="scrollbar-hide"
+            >
+              <Table stickyHeader aria-label="sticky table">
+                <TableHead className="sticky top-0">
+                  <TableRow>
+                    <TableCell>Name</TableCell>
+                    <TableCell>Type</TableCell>
+                    <TableCell>Size</TableCell>
+                    <TableCell>Last Modified</TableCell>
+                    <TableCell></TableCell>
+                  </TableRow>
+                </TableHead>
+                <TableBody>
+                  {files.map((row: any) => RowComponent(row))}
+                </TableBody>
+              </Table>
+            </TableContainer>
+          )}
+        </div>
       </div>
     </div>
   );

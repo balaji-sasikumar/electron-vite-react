@@ -3,14 +3,8 @@ import Box from "@mui/material/Box";
 import { TreeViewBaseItem } from "@mui/x-tree-view/models";
 import { RichTreeView } from "@mui/x-tree-view/RichTreeView";
 import { InvokeEvent } from "@/enums/invoke-event.enum";
-
-interface File {
-  kind: string;
-  name: string;
-  properties: any;
-  fileId: string;
-}
-
+import { File } from "../../../../electron/interfaces/file.interface";
+import "./sidebar.css";
 interface Props {
   files: File[];
   openFile: (file: File) => void;
@@ -47,6 +41,10 @@ const Sidebar: React.FC<Props> = ({ files, openFile }) => {
     }
   };
   useEffect(() => {
+    const configuration = localStorage.getItem("configuration");
+    if (configuration === null) {
+      return;
+    }
     const directories = localStorage.getItem("directories");
     (async () => {
       await window.ipcRenderer.invoke(
@@ -65,7 +63,6 @@ const Sidebar: React.FC<Props> = ({ files, openFile }) => {
   }, [files]);
 
   useEffect(() => {
-    console.log(directoryTree);
     setExpandedItems(findExpandedItems(directoryTree));
   }, [directoryTree]);
 
@@ -76,7 +73,10 @@ const Sidebar: React.FC<Props> = ({ files, openFile }) => {
   );
 
   return (
-    <Box sx={{ minHeight: 352, minWidth: 250 }}>
+    <Box
+      sx={{ height: "calc(100vh - 7rem)", width: 250 }}
+      className="py-4 overflow-y-scroll shadow-md scrollbar-hide"
+    >
       <RichTreeView
         items={directoryTree}
         expandedItems={expandedItems}
@@ -85,23 +85,26 @@ const Sidebar: React.FC<Props> = ({ files, openFile }) => {
           endIcon: folderIcon,
           collapseIcon: folderIcon,
         }}
+        className="py-2 "
         onSelectedItemsChange={(event, selectedItems) => {
-          setExpandedItems([...expandedItems, selectedItems]);
-          const directory: any = getSelectedDirectory(
-            selectedItems as string,
-            directoryTree
-          );
-          let directories = localStorage.getItem("directories") || "";
-          const dirs = directories.split("/");
-          dirs.splice(directory.level, dirs.length);
-          directories = dirs.join("/");
-          localStorage.setItem("directories", directories);
-          openFile({
-            kind: "directory",
-            name: directory.label,
-            properties: {},
-            fileId: directory.id,
-          });
+          if (selectedItems !== null && selectedItems.length > 0) {
+            setExpandedItems([...expandedItems, selectedItems]);
+            const directory: any = getSelectedDirectory(
+              selectedItems as string,
+              directoryTree
+            );
+            let directories = localStorage.getItem("directories") || "";
+            const dirs = directories.split("/");
+            dirs.splice(directory.level, dirs.length);
+            directories = dirs.join("/");
+            localStorage.setItem("directories", directories);
+            openFile({
+              kind: "directory",
+              name: directory.label,
+              properties: {},
+              fileId: directory.id,
+            });
+          }
         }}
       />
     </Box>

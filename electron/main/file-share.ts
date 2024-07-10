@@ -8,7 +8,6 @@ import mime from "mime";
 import { AES, enc } from "crypto-ts";
 import { shell } from "electron";
 import {
-  ShareDirectoryClient,
   ShareServiceClient,
   StorageSharedKeyCredential,
 } from "@azure/storage-file-share";
@@ -20,11 +19,7 @@ import {
 } from "./utils";
 import * as zlib from "zlib";
 import { Configuration } from "electron/interfaces/configuration.interface";
-interface DirectoryItem {
-  label: string;
-  id?: string;
-  children?: DirectoryItem[];
-}
+import { DirectoryItem } from "electron/interfaces/directoryItem.interface";
 export class FileShare {
   private constructor() {}
   isFileOpened = async (paths: string[]): Promise<boolean> => {
@@ -126,7 +121,6 @@ export class FileShare {
     const fetchDirectoryContents = async (
       directoryPath: string
     ): Promise<DirectoryItem[]> => {
-      console.log(directoryPath, "Directory path");
       const directoryClient = shareClient.getDirectoryClient(directoryPath);
       const iter = directoryClient.listFilesAndDirectories({
         includeTimestamps: true,
@@ -158,7 +152,6 @@ export class FileShare {
         parentDir.children = await fetchDirectoryContents(path);
         currentLevel = parentDir.children;
       } else {
-        console.log(`Directory ${pathSegment} not found`);
         break;
       }
     }
@@ -384,21 +377,6 @@ export class FileShare {
       readableStream?.on("error", reject);
     });
   }
-
-  private getProperty = async (
-    shareClient: ShareDirectoryClient,
-    file: any
-  ) => {
-    let property;
-    if (file.kind === "file") {
-      const fileClient = shareClient.getFileClient(file.name);
-      property = await fileClient.getProperties();
-    } else {
-      const directoryClient = shareClient.getDirectoryClient(file.name);
-      property = await directoryClient.getProperties();
-    }
-    return property;
-  };
 
   public static getInstance = () => {
     return new FileShare();

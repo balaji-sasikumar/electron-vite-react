@@ -75,6 +75,9 @@ const SettingsComponent: React.FC<SettingsComponentProps> = ({
             onChange={(e) => setAccountName(e.target.value)}
             required
             disabled={readOnly}
+            inputProps={{
+              maxLength: 60,
+            }}
           />
           <TextField
             id="outlined-basic"
@@ -94,6 +97,9 @@ const SettingsComponent: React.FC<SettingsComponentProps> = ({
             onChange={(e) => setShareName(e.target.value)}
             required
             disabled={readOnly}
+            inputProps={{
+              maxLength: 60,
+            }}
           />
           <TextField
             id="outlined-basic"
@@ -104,6 +110,9 @@ const SettingsComponent: React.FC<SettingsComponentProps> = ({
             required
             disabled={readOnly}
             type="password"
+            inputProps={{
+              maxLength: 60,
+            }}
           />
           <TextField
             id="outlined-basic"

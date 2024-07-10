@@ -9,3 +9,8 @@
   align-items: center;
   justify-content: center;
 }
+
+.scrollbar-hide::-webkit-scrollbar {
+  width: 0 !important;
+  display: none;
+}
