@@ -224,6 +224,7 @@ const FileExplorer: React.FC<Props> = ({ files }) => {
               refresh();
             }}
             key={"home"}
+            className="cursor-pointer"
           >
             Home
           </Link>
@@ -243,6 +244,8 @@ const FileExplorer: React.FC<Props> = ({ files }) => {
                   localStorage.setItem("directories", directories);
                   refresh();
                 }}
+                key={index}
+                className="cursor-pointer"
               >
                 {dir}
               </Link>

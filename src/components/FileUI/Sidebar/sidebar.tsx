@@ -5,6 +5,7 @@ import { RichTreeView } from "@mui/x-tree-view/RichTreeView";
 import { InvokeEvent } from "@/enums/invoke-event.enum";
 import { File } from "../../../../electron/interfaces/file.interface";
 import "./sidebar.css";
+import { TreeItem2, TreeItem2Props } from "@mui/x-tree-view";
 interface Props {
   files: File[];
   openFile: (file: File) => void;
@@ -71,7 +72,20 @@ const Sidebar: React.FC<Props> = ({ files, openFile }) => {
       folder_open
     </span>
   );
-
+  const CustomTreeItem = React.forwardRef(
+    (props: TreeItem2Props, ref: React.Ref<HTMLLIElement>) => (
+      <TreeItem2
+        title={props.label as string}
+        ref={ref}
+        {...props}
+        slotProps={{
+          label: {
+            id: `${props.itemId}-label`,
+          },
+        }}
+      />
+    )
+  );
   return (
     <Box
       sx={{ height: "calc(100vh - 7rem)", width: 250 }}
@@ -84,6 +98,7 @@ const Sidebar: React.FC<Props> = ({ files, openFile }) => {
           expandIcon: folderIcon,
           endIcon: folderIcon,
           collapseIcon: folderIcon,
+          item: CustomTreeItem,
         }}
         className="py-2 "
         onSelectedItemsChange={(event, selectedItems) => {
