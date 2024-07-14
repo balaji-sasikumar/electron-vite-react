@@ -207,7 +207,6 @@ export class FileInvocationHandler {
           .isFileOpened(paths)
           .catch(() => false);
         this.openFilesMap.set(file.name, "Opened");
-        console.log("isFileOpen", isFileOpen);
 
         if (!isFileOpen) {
           if (isEditable) {

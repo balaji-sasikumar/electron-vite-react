@@ -106,6 +106,9 @@ const FileExplorer: React.FC<Props> = ({ files }) => {
   const createFolder = async () => {
     const configuration = getConfigurations();
     let directories = localStorage.getItem("directories") || "";
+    if (folderName === "") {
+      return;
+    }
     await window.ipcRenderer.invoke(
       InvokeEvent.CreateDirectory,
       configuration,

@@ -1,7 +1,6 @@
 import { createRequire } from "node:module";
 const Opened = createRequire(import.meta.url)("@ronomon/opened");
 import * as fs from "fs";
-import * as os from "os";
 import * as path from "path";
 import { exec } from "child_process";
 import mime from "mime";
@@ -67,7 +66,7 @@ export class FileShare {
   ) => {
     try {
       const base64Data = this.convertFileToBase64(fromPath);
-      const dataURL = `data:${mime.getType(toPath)};base64,${base64Data}`;
+      const dataURL = `data:${mime.getType(fromPath)};base64,${base64Data}`;
       const encrypted = this.encryptFile(dataURL, key);
       fs.mkdirSync(path.dirname(toPath), { recursive: true });
       fs.writeFileSync(toPath, encrypted);
