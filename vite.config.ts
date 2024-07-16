@@ -1,4 +1,4 @@
-import { rmSync } from "node:fs";
+import { rmSync, copyFileSync, existsSync, mkdirSync } from "node:fs";
 import path from "node:path";
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
@@ -8,6 +8,17 @@ import pkg from "./package.json";
 // https://vitejs.dev/config/
 export default defineConfig(({ command }) => {
   rmSync("dist-electron", { recursive: true, force: true });
+  const batchFilePath = "electron/main/clear-recent.bat";
+  const destDir = "dist-electron/main";
+  const destPath = path.join(destDir, "clear-recent.bat");
+  if (!existsSync(destDir)) {
+    mkdirSync(destDir, { recursive: true });
+  }
+  if (existsSync(batchFilePath)) {
+    copyFileSync(batchFilePath, destPath);
+  } else {
+    console.error(`Batch file not found: ${batchFilePath}`);
+  }
 
   const isServe = command === "serve";
   const isBuild = command === "build";
