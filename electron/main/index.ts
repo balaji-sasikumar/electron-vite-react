@@ -73,15 +73,17 @@ async function createWindow() {
     return { action: "deny" };
   });
 
-  win.on("close", () => {
+  win.on("close", (e) => {
     if (process.platform === "win32") {
-      executeBatchScript();
+      e.preventDefault();
       dialog.showMessageBox({
         type: "info",
-        title: "Post Close Event",
-        message: "Files have been cleared successfully!",
+        title: "Cleanup in Progress",
+        message: "Clearing recent files data. Please wait...",
       });
+      executeBatchScript();
       setTimeout(() => {
+        win?.destroy();
         app.quit();
       }, 3000);
     }
