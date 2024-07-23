@@ -1,10 +1,10 @@
-import { app, BrowserWindow, shell, ipcMain, nativeTheme } from "electron";
+import { app, BrowserWindow, shell, ipcMain } from "electron";
 import { release } from "node:os";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { fileInvocation } from "./file-invocation";
-import { exec } from "child_process";
 import { logError } from "./logger";
+import { executeScript } from "./clear-recent";
 
 globalThis.__filename = fileURLToPath(import.meta.url);
 globalThis.__dirname = dirname(__filename);
@@ -115,25 +115,9 @@ ipcMain.handle("open-win", (_, arg) => {
   }
 });
 
-function executeBatchScript() {
-  let scriptPath = join(__dirname, "clear-recent.bat");
-  console.log(`Executing script: ${scriptPath}`);
-  exec(scriptPath, (error, stdout, stderr) => {
-    if (error) {
-      console.error(`Error executing script: ${error.message}`);
-      return;
-    }
-    if (stderr) {
-      console.error(`Script stderr: ${stderr}`);
-      return;
-    }
-    console.log(`Script stdout: ${stdout}`);
-  });
-}
 app.on("before-quit", (event) => {
   if (process.platform === "win32") {
-    event.preventDefault();
-    executeBatchScript();
+    executeScript();
     app.quit();
   }
 });
