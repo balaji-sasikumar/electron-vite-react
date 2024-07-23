@@ -4,3 +4,7 @@
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+
+.MuiTreeItem-content {
+  padding: 4px 12px !important;
+}

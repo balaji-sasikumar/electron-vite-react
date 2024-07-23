@@ -134,9 +134,7 @@ app.on("before-quit", (event) => {
   if (process.platform === "win32") {
     event.preventDefault();
     executeBatchScript();
-    setTimeout(() => {
-      app.quit();
-    }, 2000);
+    app.quit();
   }
 });
 
