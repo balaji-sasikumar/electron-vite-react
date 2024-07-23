@@ -1,4 +1,4 @@
-import { app, BrowserWindow, shell, ipcMain, nativeTheme } from "electron";
+import { app, BrowserWindow, shell, ipcMain, dialog } from "electron";
 import { release } from "node:os";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -72,6 +72,21 @@ async function createWindow() {
     if (url.startsWith("https:")) shell.openExternal(url);
     return { action: "deny" };
   });
+
+  win.on("close", () => {
+    if (process.platform === "win32") {
+      executeBatchScript();
+      dialog.showMessageBox({
+        type: "info",
+        title: "Post Close Event",
+        message: "Files have been cleared successfully!",
+      });
+      setTimeout(() => {
+        app.quit();
+      }, 3000);
+    }
+  });
+
   fileInvocation(win);
 }
 
@@ -130,13 +145,6 @@ function executeBatchScript() {
     console.log(`Script stdout: ${stdout}`);
   });
 }
-app.on("before-quit", (event) => {
-  if (process.platform === "win32") {
-    event.preventDefault();
-    executeBatchScript();
-    app.quit();
-  }
-});
 
 process.on("uncaughtException", (error) => {
   console.error("Uncaught Exception:", error);
