@@ -1,4 +1,11 @@
-import { app, BrowserWindow, shell, ipcMain, dialog } from "electron";
+import {
+  app,
+  BrowserWindow,
+  shell,
+  ipcMain,
+  dialog,
+  nativeTheme,
+} from "electron";
 import { release } from "node:os";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -37,6 +44,7 @@ const preload = join(__dirname, "../preload/index.mjs");
 const url = process.env.VITE_DEV_SERVER_URL;
 const indexHtml = join(process.env.DIST, "index.html");
 
+nativeTheme.themeSource = "light";
 async function createWindow() {
   win = new BrowserWindow({
     title: "Main window",
@@ -62,11 +70,6 @@ async function createWindow() {
     win.loadFile(indexHtml);
   }
 
-  // Test actively push message to the Electron-Renderer
-  win.webContents.on("did-finish-load", () => {
-    win?.webContents.send("main-process-message", new Date().toLocaleString());
-  });
-
   // Make all links open with the browser, not with the application
   win.webContents.setWindowOpenHandler(({ url }) => {
     if (url.startsWith("https:")) shell.openExternal(url);
@@ -87,6 +90,12 @@ async function createWindow() {
         app.quit();
       }, 3000);
     }
+  });
+  win.on("blur", () => {
+    win?.webContents.send("app-state-changed", "blur");
+  });
+  win.on("focus", () => {
+    win?.webContents.send("app-state-changed", "focus");
   });
 
   fileInvocation(win);
