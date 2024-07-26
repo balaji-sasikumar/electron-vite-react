@@ -5,6 +5,7 @@ import { ThemeProvider, createTheme } from "@mui/material/styles";
 import CssBaseline from "@mui/material/CssBaseline";
 import { InvokeEvent } from "./enums/invoke-event.enum";
 import Snackbar from "@mui/material/Snackbar";
+import PassCodeComponent from "./components/FileUI/PassCode/pass-code";
 import { Alert, Box, CircularProgress, Slide, SlideProps } from "@mui/material";
 const lightTheme = createTheme({
   palette: {
@@ -17,6 +18,7 @@ interface File {
   properties: {
     contentLength: number;
   };
+  fileId: string;
 }
 function SlideTransition(props: SlideProps) {
   return <Slide {...props} direction="up" />;
@@ -29,27 +31,37 @@ function App() {
   >("info");
   const [snackBarOpen, setSnackBarOpen] = useState<boolean>(false);
   const [loading, setLoading] = useState<boolean>(false);
+  const [showPassCode, setShowPassCode] = useState<boolean>(true);
   const sendOnlineStatus = () => {
     window.electron.sendOnlineStatus();
   };
+
+  const showSnackBar = (severity: any, message: string) => {
+    setSeverity(severity);
+    setMessage(message);
+    setSnackBarOpen(true);
+  };
+
+  let timeoutValue: NodeJS.Timeout;
   useEffect(() => {
     sendOnlineStatus();
     const handleOffline = () => {
-      setSeverity("error");
-      setMessage("You are offline. Please check your internet connection.");
-      setSnackBarOpen(true);
+      showSnackBar(
+        "error",
+        "You are offline. Please check your internet connection."
+      );
       setFiles([]);
       sendOnlineStatus();
     };
     const handleOnline = () => {
       sendOnlineStatus();
-      window.location.reload();
+      fetchData();
     };
 
     window.addEventListener("offline", handleOffline);
     window.addEventListener("online", handleOnline);
 
-    (async () => {
+    const fetchData = async () => {
       if (!navigator.onLine) {
         handleOffline();
         return;
@@ -59,9 +71,10 @@ function App() {
         localStorage.setItem("directories", "");
       const configuration = localStorage.getItem("configuration");
       if (configuration === null) {
-        setSeverity("info");
-        setMessage("Please configure the application before using it.");
-        setSnackBarOpen(true);
+        showSnackBar(
+          "info",
+          "Please configure the application before using it."
+        );
       } else {
         let directoryName = localStorage.getItem("directories");
         await window.ipcRenderer.invoke(
@@ -74,9 +87,7 @@ function App() {
       window.ipcRenderer.on(
         InvokeEvent.FileProcessing,
         (event, title, message) => {
-          setSeverity(title as any);
-          setMessage(message);
-          setSnackBarOpen(true);
+          showSnackBar(title as any, message);
         }
       );
       window.ipcRenderer.on(InvokeEvent.Loading, (event, loading) => {
@@ -86,7 +97,18 @@ function App() {
       window.ipcRenderer.on(InvokeEvent.GetFileResponse, (event, file) => {
         setFiles(file);
       });
-    })();
+    };
+
+    fetchData();
+
+    window.ipcRenderer.on("app-state-changed", (event, message) => {
+      clearTimeout(timeoutValue);
+      if (message === "blur") {
+        timeoutValue = setTimeout(() => {
+          setShowPassCode(true);
+        }, 10000);
+      }
+    });
 
     return () => {
       window.ipcRenderer.off(InvokeEvent.FileProcessing, () => {});
@@ -120,7 +142,14 @@ function App() {
             {message}
           </Alert>
         </Snackbar>
-        <FileExplorer files={files} />
+        {showPassCode ? (
+          <PassCodeComponent
+            setShowPassCode={setShowPassCode}
+            showSnackBar={showSnackBar}
+          />
+        ) : (
+          <FileExplorer files={files} />
+        )}
       </ThemeProvider>
     </>
   );

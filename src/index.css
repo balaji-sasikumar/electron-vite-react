@@ -62,7 +62,8 @@ button:focus-visible {
 }
 .xlsx,
 .csv,
-.xls {
+.xls,
+.numbers {
   content: url(./assets/excel.svg);
 }
 .pdf {
@@ -87,4 +88,7 @@ button:focus-visible {
 .flac,
 .ogg {
   content: url(./assets/music.svg);
+}
+.txt {
+  content: url(./assets/text.png);
 }

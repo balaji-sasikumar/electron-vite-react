@@ -19,16 +19,19 @@ const style = {
 type SettingsComponentProps = {
   open: boolean;
   onClose?: () => void;
+  refresh: () => void;
 };
 
 const SettingsComponent: React.FC<SettingsComponentProps> = ({
   open,
   onClose,
+  refresh,
 }) => {
   const [accountName, setAccountName] = useState<string>("");
   const [accountKey, setAccountKey] = useState<string>("");
   const [shareName, setShareName] = useState<string>("");
   const [privateKey, setPrivateKey] = useState<string>("");
+  const [tempPath, setTempPath] = useState<string>("");
   const [readOnly, setReadOnly] = useState<boolean>(false);
   useEffect(() => {
     const configuration = localStorage.getItem("configuration");
@@ -38,6 +41,7 @@ const SettingsComponent: React.FC<SettingsComponentProps> = ({
       setAccountKey(config.accountKey);
       setShareName(config.shareName);
       setPrivateKey(config.privateKey);
+      setTempPath(config.tempPath);
       setReadOnly(true);
     }
   }, []);
@@ -47,10 +51,11 @@ const SettingsComponent: React.FC<SettingsComponentProps> = ({
       accountKey,
       shareName,
       privateKey,
+      tempPath,
     };
     localStorage.setItem("configuration", JSON.stringify(storageData));
     onClose && onClose();
-    window.location.reload();
+    refresh();
   };
 
   return (
@@ -72,6 +77,9 @@ const SettingsComponent: React.FC<SettingsComponentProps> = ({
             onChange={(e) => setAccountName(e.target.value)}
             required
             disabled={readOnly}
+            inputProps={{
+              maxLength: 60,
+            }}
           />
           <TextField
             id="outlined-basic"
@@ -91,6 +99,9 @@ const SettingsComponent: React.FC<SettingsComponentProps> = ({
             onChange={(e) => setShareName(e.target.value)}
             required
             disabled={readOnly}
+            inputProps={{
+              maxLength: 60,
+            }}
           />
           <TextField
             id="outlined-basic"
@@ -101,8 +112,19 @@ const SettingsComponent: React.FC<SettingsComponentProps> = ({
             required
             disabled={readOnly}
             type="password"
+            inputProps={{
+              maxLength: 60,
+            }}
           />
-
+          <TextField
+            id="outlined-basic"
+            label="Enter Temp Path"
+            variant="outlined"
+            value={tempPath}
+            onChange={(e) => setTempPath(e.target.value)}
+            required
+            disabled={readOnly}
+          />
           <div className="flex flex-row gap-3">
             {!readOnly && (
               <Button
@@ -110,7 +132,11 @@ const SettingsComponent: React.FC<SettingsComponentProps> = ({
                 className="flex items-center justify-center gap-2 cursor-pointer"
                 onClick={handleSave}
                 disabled={
-                  !accountName || !accountKey || !shareName || !privateKey
+                  !accountName ||
+                  !accountKey ||
+                  !shareName ||
+                  !privateKey ||
+                  !tempPath
                 }
               >
                 Save

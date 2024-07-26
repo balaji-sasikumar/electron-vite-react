@@ -1,22 +1,21 @@
-import { app, BrowserWindow, shell, ipcMain, nativeTheme } from "electron";
+import {
+  app,
+  BrowserWindow,
+  shell,
+  ipcMain,
+  dialog,
+  nativeTheme,
+} from "electron";
 import { release } from "node:os";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { fileInvocation } from "./file-invocation";
+import { exec } from "child_process";
+import { logError } from "./logger";
 
 globalThis.__filename = fileURLToPath(import.meta.url);
 globalThis.__dirname = dirname(__filename);
 
-// The built directory structure
-//
-// ├─┬ dist-electron
-// │ ├─┬ main
-// │ │ └── index.js    > Electron-Main
-// │ └─┬ preload
-// │   └── index.mjs    > Preload-Scripts
-// ├─┬ dist
-// │ └── index.html    > Electron-Renderer
-//
 process.env.DIST_ELECTRON = join(__dirname, "../");
 process.env.DIST = join(process.env.DIST_ELECTRON, "../dist");
 process.env.VITE_PUBLIC = process.env.VITE_DEV_SERVER_URL
@@ -45,6 +44,7 @@ const preload = join(__dirname, "../preload/index.mjs");
 const url = process.env.VITE_DEV_SERVER_URL;
 const indexHtml = join(process.env.DIST, "index.html");
 
+nativeTheme.themeSource = "light";
 async function createWindow() {
   win = new BrowserWindow({
     title: "Main window",
@@ -59,8 +59,8 @@ async function createWindow() {
       // contextIsolation: false,
     },
   });
-  nativeTheme.themeSource = "dark";
-
+  win.maximize();
+  win.removeMenu();
   if (url) {
     // electron-vite-vue#298
     win.loadURL(url);
@@ -70,23 +70,38 @@ async function createWindow() {
     win.loadFile(indexHtml);
   }
 
-  // Test actively push message to the Electron-Renderer
-  win.webContents.on("did-finish-load", () => {
-    win?.webContents.send("main-process-message", new Date().toLocaleString());
-  });
-
   // Make all links open with the browser, not with the application
   win.webContents.setWindowOpenHandler(({ url }) => {
     if (url.startsWith("https:")) shell.openExternal(url);
     return { action: "deny" };
   });
 
-  // Apply electron-updater
+  win.on("close", (e) => {
+    if (process.platform === "win32") {
+      e.preventDefault();
+      dialog.showMessageBox({
+        type: "info",
+        title: "Cleanup in Progress",
+        message: "Clearing recent files data. Please wait...",
+      });
+      executeBatchScript();
+      setTimeout(() => {
+        win?.destroy();
+        app.quit();
+      }, 3000);
+    }
+  });
+  win.on("blur", () => {
+    win?.webContents.send("app-state-changed", "blur");
+  });
+  win.on("focus", () => {
+    win?.webContents.send("app-state-changed", "focus");
+  });
+
   fileInvocation(win);
 }
 
 app.whenReady().then(createWindow);
-
 app.on("window-all-closed", () => {
   win = null;
   if (process.platform !== "darwin") app.quit();
@@ -124,4 +139,32 @@ ipcMain.handle("open-win", (_, arg) => {
   } else {
     childWindow.loadFile(indexHtml, { hash: arg });
   }
+});
+
+function executeBatchScript() {
+  let scriptPath = join(__dirname, "clear-recent.bat");
+  console.log(`Executing script: ${scriptPath}`);
+  exec(scriptPath, (error, stdout, stderr) => {
+    if (error) {
+      console.error(`Error executing script: ${error.message}`);
+      return;
+    }
+    if (stderr) {
+      console.error(`Script stderr: ${stderr}`);
+      return;
+    }
+    console.log(`Script stdout: ${stdout}`);
+  });
+}
+
+process.on("uncaughtException", (error) => {
+  console.error("Uncaught Exception:", error);
+  logError(`Uncaught Exception -- ${JSON.stringify(error)}`);
+  app.quit();
+});
+
+process.on("unhandledRejection", (error) => {
+  console.error("Unhandled Rejection:", error);
+  logError(`Unhandled Exception -- ${JSON.stringify(error)}`);
+  app.quit();
 });

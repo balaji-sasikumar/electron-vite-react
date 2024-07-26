@@ -16,14 +16,12 @@ import AlertDialog from "../Dialog/dialog";
 import { Card, CardContent, IconButton, Typography } from "@mui/material";
 import Menu from "@mui/material/Menu";
 import MenuItem from "@mui/material/MenuItem";
+import Breadcrumbs from "@mui/material/Breadcrumbs";
+import Link from "@mui/material/Link";
 import SettingsComponent from "../Settings/settings";
-interface File {
-  kind: string;
-  name: string;
-  properties: {
-    contentLength: number;
-  };
-}
+import dayjs from "dayjs";
+import SideBar from "../Sidebar/sidebar";
+import { File } from "../../../../electron/interfaces/file.interface";
 
 interface Props {
   files: File[];
@@ -42,6 +40,7 @@ const FileExplorer: React.FC<Props> = ({ files }) => {
   const [currentDirectory, setCurrentDirectory] = useState<string>(
     (localStorage.getItem("directories") || "").split("/").pop() || ""
   );
+  const [breadcrumbs, setBreadcrumbs] = useState<string[]>([]);
   const [anchorEl, setAnchorEl] = React.useState<null | HTMLElement>(null);
   const open = Boolean(anchorEl);
   const handleMenuClick = (event: React.MouseEvent<HTMLElement>) => {
@@ -56,6 +55,7 @@ const FileExplorer: React.FC<Props> = ({ files }) => {
 
   const [message, setMessage] = useState("");
   const [title, setTitle] = useState("");
+
   const [modalOpen, setModalOpen] = useState<boolean>(false);
   const [modalBtn, setModalBtn] = useState<{
     cancelText?: string;
@@ -66,6 +66,7 @@ const FileExplorer: React.FC<Props> = ({ files }) => {
     onCancel: () => setModalOpen(false),
     onOk: () => setModalOpen(false),
   });
+
   const handleOpen = () => setDirectoryModalOpen(true);
   const handleClose = () => {
     setFolderName("");
@@ -73,10 +74,12 @@ const FileExplorer: React.FC<Props> = ({ files }) => {
   };
   useEffect(() => {
     setShowOptions(navigator.onLine);
-    window.ipcRenderer.on(InvokeEvent.TryFetch, async (event) => {
+    setBreadcrumbs(
+      (localStorage.getItem("directories") || "").split("/").filter((x) => x)
+    );
+    window.ipcRenderer.on(InvokeEvent.TryFetch, async () => {
       refresh();
     });
-
     return () => {
       window.ipcRenderer.off(InvokeEvent.TryFetch, () => {});
     };
@@ -105,6 +108,9 @@ const FileExplorer: React.FC<Props> = ({ files }) => {
   const createFolder = async () => {
     const configuration = getConfigurations();
     let directories = localStorage.getItem("directories") || "";
+    if (folderName === "") {
+      return;
+    }
     await window.ipcRenderer.invoke(
       InvokeEvent.CreateDirectory,
       configuration,
@@ -203,6 +209,58 @@ const FileExplorer: React.FC<Props> = ({ files }) => {
       return (contentLength / (1024 * 1024)).toFixed(2) + " MB";
     }
   }
+
+  function formatDate(date: string): string {
+    return dayjs(date).format("DD/MM/YY hh:mm:ss A");
+  }
+
+  const getConfigurations = () => localStorage.getItem("configuration");
+
+  function BreadcrumbsComponent({ breadcrumbs }: { breadcrumbs: string[] }) {
+    return (
+      <div role="presentation">
+        <Breadcrumbs aria-label="breadcrumb">
+          <Link
+            underline="hover"
+            color={breadcrumbs.length === 0 ? "textPrimary" : "inherit"}
+            onClick={() => {
+              localStorage.setItem("directories", "");
+              setCurrentDirectory("");
+              refresh();
+            }}
+            key={"home"}
+            className="cursor-pointer"
+          >
+            Home
+          </Link>
+          {breadcrumbs?.map((dir, index) => {
+            return (
+              <Link
+                underline="hover"
+                color={
+                  index === breadcrumbs.length - 1 ? "textPrimary" : "inherit"
+                }
+                onClick={() => {
+                  let directories = localStorage.getItem("directories") || "";
+                  const dirs = directories.split("/");
+                  dirs.splice(index + 1, dirs.length - index - 1);
+                  directories = dirs.join("/");
+                  setCurrentDirectory(dirs[dirs.length - 1]);
+                  localStorage.setItem("directories", directories);
+                  refresh();
+                }}
+                key={index}
+                className="cursor-pointer"
+              >
+                {dir}
+              </Link>
+            );
+          })}
+        </Breadcrumbs>
+      </div>
+    );
+  }
+
   function CreateFolderModal() {
     return (
       <Modal
@@ -225,6 +283,9 @@ const FileExplorer: React.FC<Props> = ({ files }) => {
                 if (e.key === "Enter") {
                   createFolder();
                 }
+              }}
+              inputProps={{
+                maxLength: 30,
               }}
             />
             <div className="flex flex-row gap-3">
@@ -271,15 +332,62 @@ const FileExplorer: React.FC<Props> = ({ files }) => {
       </Card>
     );
   }
-  const getConfigurations = () => localStorage.getItem("configuration");
 
+  function RowComponent(row: any, isRestricted: boolean = true) {
+    return (
+      <TableRow
+        key={row.name}
+        sx={{ "&:last-child td, &:last-child th": { border: 0 } }}
+      >
+        <TableCell
+          component="th"
+          scope="row"
+          onClick={() => {
+            openFile(row);
+          }}
+          className="cursor-pointer"
+        >
+          <div className="flex items-center gap-4">
+            {row.kind === "directory" ? (
+              <span className="material-symbols-outlined material-symbols-fill text-yellow-400 max-w-6 max-h-6">
+                folder_open
+              </span>
+            ) : (
+              <span
+                className={`${row.name
+                  .split(".")?.[1]
+                  .toLowerCase()} max-w-6 max-h-6`}
+              ></span>
+            )}
+            {row.kind === "file" ? row.name.split(".txt")?.[0] : row.name}
+          </div>
+        </TableCell>
+        <TableCell>
+          {row.kind.charAt(0).toUpperCase() + row.kind.slice(1)}
+        </TableCell>
+        <TableCell>
+          {row.kind === "file" &&
+            convertContentLength(row.properties.contentLength)}
+        </TableCell>
+        <TableCell>
+          {formatDate(row.properties.lastModified || row.properties.createdOn)}
+        </TableCell>
+        <TableCell className="cursor-pointer" onClick={() => deleteDialog(row)}>
+          <span className="material-symbols-outlined font-extralight">
+            delete
+          </span>
+        </TableCell>
+      </TableRow>
+    );
+  }
   return (
-    <>
+    <div>
       <SettingsComponent
         open={settingsModalOpen}
         onClose={() => {
           setSettingsModalOpen(false);
         }}
+        refresh={refresh}
       />
       <AlertDialog
         open={modalOpen}
@@ -304,7 +412,7 @@ const FileExplorer: React.FC<Props> = ({ files }) => {
               chevron_left
             </IconButton>
           )}
-          <span className="folder">{currentDirectory || "Home"}</span>
+          <BreadcrumbsComponent breadcrumbs={breadcrumbs} />
         </div>
         <div className="ml-auto flex justify-end gap-3">
           <Button
@@ -349,9 +457,9 @@ const FileExplorer: React.FC<Props> = ({ files }) => {
             }}
           >
             <MenuItem
-              onClick={() => {
+              onClick={async () => {
                 localStorage.clear();
-                window.location.reload();
+                refresh();
                 setAnchorEl(null);
               }}
               className="flex items-center gap-2"
@@ -372,72 +480,36 @@ const FileExplorer: React.FC<Props> = ({ files }) => {
           </Menu>
         </div>
       </div>
-      {files.length == 0 ? (
-        NoContentsComponent()
-      ) : (
-        <TableContainer component={Paper}>
-          <Table stickyHeader aria-label="sticky table">
-            <TableHead>
-              <TableRow>
-                <TableCell>Name</TableCell>
-                <TableCell>Type</TableCell>
-                <TableCell>Size</TableCell>
-                <TableCell></TableCell>
-              </TableRow>
-            </TableHead>
-            <TableBody>
-              {files.map((row: any) => (
-                <TableRow
-                  key={row.name}
-                  sx={{ "&:last-child td, &:last-child th": { border: 0 } }}
-                >
-                  <TableCell
-                    component="th"
-                    scope="row"
-                    onClick={() => {
-                      openFile(row);
-                    }}
-                    className="cursor-pointer"
-                  >
-                    <div className="flex items-center gap-4">
-                      {row.kind === "directory" ? (
-                        <span className="material-symbols-outlined material-symbols-fill text-yellow-400 max-w-6 max-h-6">
-                          folder_open
-                        </span>
-                      ) : (
-                        <span
-                          className={`${row.name
-                            .split(".")?.[1]
-                            .toLowerCase()} max-w-6 max-h-6`}
-                        ></span>
-                      )}
-                      {row.kind === "file"
-                        ? row.name.split(".txt")?.[0]
-                        : row.name}
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    {row.kind.charAt(0).toUpperCase() + row.kind.slice(1)}
-                  </TableCell>
-                  <TableCell>
-                    {row.kind === "file" &&
-                      convertContentLength(row.properties.contentLength)}
-                  </TableCell>
-                  <TableCell
-                    className="cursor-pointer"
-                    onClick={() => deleteDialog(row)}
-                  >
-                    <span className="material-symbols-outlined font-extralight">
-                      delete
-                    </span>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </TableContainer>
-      )}
-    </>
+      <div className="flex flex-row">
+        <SideBar files={files} openFile={openFile} />
+        <div className="grow pl-3">
+          {files.length == 0 ? (
+            NoContentsComponent()
+          ) : (
+            <TableContainer
+              component={Paper}
+              sx={{ maxHeight: "calc(100vh - 7rem)" }}
+              className="scrollbar-hide"
+            >
+              <Table stickyHeader aria-label="sticky table">
+                <TableHead className="sticky top-0">
+                  <TableRow>
+                    <TableCell>Name</TableCell>
+                    <TableCell>Type</TableCell>
+                    <TableCell>Size</TableCell>
+                    <TableCell>Last Modified</TableCell>
+                    <TableCell></TableCell>
+                  </TableRow>
+                </TableHead>
+                <TableBody>
+                  {files.map((row: any) => RowComponent(row))}
+                </TableBody>
+              </Table>
+            </TableContainer>
+          )}
+        </div>
+      </div>
+    </div>
   );
 };
 
