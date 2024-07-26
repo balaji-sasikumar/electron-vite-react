@@ -137,6 +137,10 @@ export class FileInvocationHandler {
     folderName: string
   ) => {
     configuration = JSON.parse(configuration);
+    if (!configuration) {
+      ipcEvent.sender.send(InvokeEvent.GetFileResponse, []);
+      return;
+    }
     const res = await this.fileShare.listFiles(configuration, folderName);
     ipcEvent.sender.send(InvokeEvent.GetFileResponse, res);
   };

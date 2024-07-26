@@ -42,6 +42,10 @@ const Sidebar: React.FC<Props> = ({ files, openFile }) => {
     }
   };
   useEffect(() => {
+    if (files.length === 0) {
+      setDirectoryTree([]);
+      return;
+    }
     const configuration = localStorage.getItem("configuration");
     if (configuration === null) {
       return;

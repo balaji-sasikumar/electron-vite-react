@@ -55,6 +55,7 @@ const FileExplorer: React.FC<Props> = ({ files }) => {
 
   const [message, setMessage] = useState("");
   const [title, setTitle] = useState("");
+
   const [modalOpen, setModalOpen] = useState<boolean>(false);
   const [modalBtn, setModalBtn] = useState<{
     cancelText?: string;
@@ -65,6 +66,7 @@ const FileExplorer: React.FC<Props> = ({ files }) => {
     onCancel: () => setModalOpen(false),
     onOk: () => setModalOpen(false),
   });
+
   const handleOpen = () => setDirectoryModalOpen(true);
   const handleClose = () => {
     setFolderName("");
@@ -75,7 +77,7 @@ const FileExplorer: React.FC<Props> = ({ files }) => {
     setBreadcrumbs(
       (localStorage.getItem("directories") || "").split("/").filter((x) => x)
     );
-    window.ipcRenderer.on(InvokeEvent.TryFetch, async (event) => {
+    window.ipcRenderer.on(InvokeEvent.TryFetch, async () => {
       refresh();
     });
     return () => {
@@ -385,6 +387,7 @@ const FileExplorer: React.FC<Props> = ({ files }) => {
         onClose={() => {
           setSettingsModalOpen(false);
         }}
+        refresh={refresh}
       />
       <AlertDialog
         open={modalOpen}
@@ -454,9 +457,9 @@ const FileExplorer: React.FC<Props> = ({ files }) => {
             }}
           >
             <MenuItem
-              onClick={() => {
+              onClick={async () => {
                 localStorage.clear();
-                window.location.reload();
+                refresh();
                 setAnchorEl(null);
               }}
               className="flex items-center gap-2"

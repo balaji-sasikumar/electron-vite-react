@@ -19,11 +19,13 @@ const style = {
 type SettingsComponentProps = {
   open: boolean;
   onClose?: () => void;
+  refresh: () => void;
 };
 
 const SettingsComponent: React.FC<SettingsComponentProps> = ({
   open,
   onClose,
+  refresh,
 }) => {
   const [accountName, setAccountName] = useState<string>("");
   const [accountKey, setAccountKey] = useState<string>("");
@@ -53,7 +55,7 @@ const SettingsComponent: React.FC<SettingsComponentProps> = ({
     };
     localStorage.setItem("configuration", JSON.stringify(storageData));
     onClose && onClose();
-    window.location.reload();
+    refresh();
   };
 
   return (

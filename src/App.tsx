@@ -55,13 +55,13 @@ function App() {
     };
     const handleOnline = () => {
       sendOnlineStatus();
-      window.location.reload();
+      fetchData();
     };
 
     window.addEventListener("offline", handleOffline);
     window.addEventListener("online", handleOnline);
 
-    (async () => {
+    const fetchData = async () => {
       if (!navigator.onLine) {
         handleOffline();
         return;
@@ -97,7 +97,9 @@ function App() {
       window.ipcRenderer.on(InvokeEvent.GetFileResponse, (event, file) => {
         setFiles(file);
       });
-    })();
+    };
+
+    fetchData();
 
     window.ipcRenderer.on("app-state-changed", (event, message) => {
       clearTimeout(timeoutValue);
