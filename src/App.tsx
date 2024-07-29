@@ -37,6 +37,7 @@ function App() {
   };
 
   const showSnackBar = (severity: any, message: string) => {
+    if (showPassCode && severity != "error") return;
     setSeverity(severity);
     setMessage(message);
     setSnackBarOpen(true);
@@ -117,7 +118,7 @@ function App() {
       window.removeEventListener("offline", handleOffline);
       window.removeEventListener("online", handleOnline);
     };
-  }, []);
+  }, [showPassCode]);
 
   return (
     <>
