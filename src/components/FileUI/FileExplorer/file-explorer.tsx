@@ -367,7 +367,7 @@ const FileExplorer: React.FC<Props> = ({ files }) => {
               className="scrollbar-hide"
             >
               <Table stickyHeader aria-label="sticky table">
-                <TableHead className="sticky top-0">
+                <TableHead className="sticky top-0 z-50">
                   <TableRow>
                     <TableCell>Name</TableCell>
                     <TableCell>Type</TableCell>
