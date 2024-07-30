@@ -29,7 +29,7 @@ export class FileInvocationHandler {
       ipcEvent.sender.send(InvokeEvent.TryFetch, "");
     } catch (error: any) {
       ipcEvent.sender.send(
-        InvokeEvent.FileProcessing,
+        InvokeEvent.FileProcessingMessage,
         Status.Error,
         error?.details?.message || "An error occurred while deleting the file"
       );
@@ -51,7 +51,7 @@ export class FileInvocationHandler {
       ipcEvent.sender.send(InvokeEvent.TryFetch, "");
     } catch (error: any) {
       ipcEvent.sender.send(
-        InvokeEvent.FileProcessing,
+        InvokeEvent.FileProcessingMessage,
         Status.Error,
         error?.details?.message ||
           "An error occurred while creating the directory"
@@ -69,7 +69,7 @@ export class FileInvocationHandler {
       ipcEvent.sender.send(InvokeEvent.TryFetch, "");
     } catch (error: any) {
       ipcEvent.sender.send(
-        InvokeEvent.FileProcessing,
+        InvokeEvent.FileProcessingMessage,
         Status.Error,
         error?.details?.message ||
           "An error occurred while deleting the directory"
@@ -118,14 +118,14 @@ export class FileInvocationHandler {
       this.loadingHandler(ipcEvent, false);
       ipcEvent.sender.send(InvokeEvent.TryFetch, "");
       ipcEvent.sender.send(
-        InvokeEvent.FileProcessing,
+        InvokeEvent.FileProcessingMessage,
         Status.Success,
         `The file ${path.basename(selectedPath)} is uploaded successfully`
       );
     } catch (error: any) {
       this.loadingHandler(ipcEvent, false);
       ipcEvent.sender.send(
-        InvokeEvent.FileProcessing,
+        InvokeEvent.FileProcessingMessage,
         Status.Error,
         error?.details?.message || "An error occurred while uploading the file"
       );
@@ -155,7 +155,7 @@ export class FileInvocationHandler {
       configuration = JSON.parse(configuration);
       if (!file.name.endsWith(".txt") && !file.name.endsWith(".gz")) {
         ipcEvent.sender.send(
-          InvokeEvent.FileProcessing,
+          InvokeEvent.FileProcessingMessage,
           Status.Error,
           `The file ${file.name} is not supported for opening`
         );
@@ -169,7 +169,7 @@ export class FileInvocationHandler {
       if (this.openFilesMap.has(file.name)) {
         this.loadingHandler(ipcEvent, false);
         ipcEvent.sender.send(
-          InvokeEvent.FileProcessing,
+          InvokeEvent.FileProcessingMessage,
           Status.Error,
           `The file ${path.basename(viewPath)} is already opened`
         );
@@ -189,7 +189,7 @@ export class FileInvocationHandler {
       if (decrypted === DATA_FORMAT_NOT_SUPPORTED) {
         this.loadingHandler(ipcEvent, false);
         ipcEvent.sender.send(
-          InvokeEvent.FileProcessing,
+          InvokeEvent.FileProcessingMessage,
           Status.Error,
           `The file ${path.basename(viewPath)} is not in the correct format`
         );
@@ -234,7 +234,7 @@ export class FileInvocationHandler {
       this.loadingHandler(ipcEvent, false);
       this.openFilesMap.delete(file.name);
       ipcEvent.sender.send(
-        InvokeEvent.FileProcessing,
+        InvokeEvent.FileProcessingMessage,
         Status.Error,
         error?.details?.message || "An error occurred while opening the file"
       );
@@ -270,7 +270,7 @@ export class FileInvocationHandler {
     if (!onlineStatus) {
       this.loadingHandler(ipcEvent, false);
       ipcEvent.sender.send(
-        InvokeEvent.FileProcessing,
+        InvokeEvent.FileProcessingMessage,
         Status.Error,
         `File ${file.name} cannot be saved in offline mode`
       );

@@ -3,7 +3,7 @@ export enum InvokeEvent {
   CreateDirectory = "create-directory",
   DeleteDirectory = "delete-directory",
   UploadFromPC = "upload-from-pc",
-  FileProcessing = "file-processing",
+  FileProcessingMessage = "file-processing-message",
   GetFiles = "get-files",
   OpenFile = "open-file",
   GetFileResponse = "get-file-response",

@@ -72,6 +72,7 @@ function App() {
         localStorage.setItem("directories", "");
       const configuration = localStorage.getItem("configuration");
       if (configuration === null) {
+        setFiles([]);
         showSnackBar(
           "info",
           "Please configure the application before using it."
@@ -86,7 +87,7 @@ function App() {
       }
 
       window.ipcRenderer.on(
-        InvokeEvent.FileProcessing,
+        InvokeEvent.FileProcessingMessage,
         (event, title, message) => {
           showSnackBar(title as any, message);
         }
@@ -112,7 +113,7 @@ function App() {
     });
 
     return () => {
-      window.ipcRenderer.off(InvokeEvent.FileProcessing, () => {});
+      window.ipcRenderer.off(InvokeEvent.FileProcessingMessage, () => {});
       window.ipcRenderer.off(InvokeEvent.GetFileResponse, () => {});
       window.ipcRenderer.off(InvokeEvent.Loading, () => {});
       window.removeEventListener("offline", handleOffline);

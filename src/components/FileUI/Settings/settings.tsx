@@ -4,6 +4,7 @@ import Button from "@mui/material/Button";
 import TextField from "@mui/material/TextField";
 import Modal from "@mui/material/Modal";
 import "./settings.css";
+import { IconButton, InputAdornment } from "@mui/material";
 
 const style = {
   position: "absolute" as "absolute",
@@ -27,16 +28,22 @@ const SettingsComponent: React.FC<SettingsComponentProps> = ({
   onClose,
   refresh,
 }) => {
+  const [connectionString, setConnectionString] = useState<string>("");
   const [accountName, setAccountName] = useState<string>("");
   const [accountKey, setAccountKey] = useState<string>("");
   const [shareName, setShareName] = useState<string>("");
   const [privateKey, setPrivateKey] = useState<string>("");
   const [tempPath, setTempPath] = useState<string>("D:/");
   const [readOnly, setReadOnly] = useState<boolean>(false);
+
+  const [showPrivateKey, setShowPrivateKey] = useState<boolean>(false);
+
   useEffect(() => {
     const configuration = localStorage.getItem("configuration");
-    if (configuration) {
+    const preConnectionString = localStorage.getItem("connectionString");
+    if (configuration && preConnectionString) {
       const config = JSON.parse(configuration);
+      setConnectionString(preConnectionString);
       setAccountName(config.accountName);
       setAccountKey(config.accountKey);
       setShareName(config.shareName);
@@ -44,11 +51,13 @@ const SettingsComponent: React.FC<SettingsComponentProps> = ({
       setTempPath(config.tempPath);
       setReadOnly(true);
     } else {
+      setConnectionString("");
       setAccountName("");
       setAccountKey("");
       setShareName("");
       setPrivateKey("");
       setTempPath("D:/");
+      setReadOnly(false);
     }
   }, [open]);
   const handleSave = () => {
@@ -60,6 +69,8 @@ const SettingsComponent: React.FC<SettingsComponentProps> = ({
       tempPath,
     };
     localStorage.setItem("configuration", JSON.stringify(storageData));
+    localStorage.setItem("directories", "");
+    localStorage.setItem("connectionString", connectionString);
     onClose && onClose();
     refresh();
   };
@@ -77,25 +88,21 @@ const SettingsComponent: React.FC<SettingsComponentProps> = ({
         <div className="flex flex-col gap-3">
           <TextField
             id="outlined-basic"
-            label="Enter Account Name"
+            label="Enter Connection String"
             variant="outlined"
-            value={accountName}
-            onChange={(e) => setAccountName(e.target.value)}
-            required
-            disabled={readOnly}
-            inputProps={{
-              maxLength: 60,
+            value={connectionString}
+            onChange={(e) => {
+              setConnectionString(e.target.value);
+              const regex = /AccountName=(.*?);AccountKey=(.*?);/g;
+              const match = regex.exec(e.target.value);
+              if (match) {
+                setAccountName(match[1]);
+                setAccountKey(match[2]);
+              }
             }}
-          />
-          <TextField
-            id="outlined-basic"
-            label="Enter Account Key"
-            variant="outlined"
-            value={accountKey}
-            onChange={(e) => setAccountKey(e.target.value)}
             required
             disabled={readOnly}
-            type="password"
+            type="text"
           />
           <TextField
             id="outlined-basic"
@@ -106,8 +113,9 @@ const SettingsComponent: React.FC<SettingsComponentProps> = ({
             required
             disabled={readOnly}
             inputProps={{
-              maxLength: 60,
+              maxLength: 200,
             }}
+            maxRows={4}
           />
           <TextField
             id="outlined-basic"
@@ -117,9 +125,33 @@ const SettingsComponent: React.FC<SettingsComponentProps> = ({
             onChange={(e) => setPrivateKey(e.target.value)}
             required
             disabled={readOnly}
-            type="password"
+            type={showPrivateKey ? "text" : "password"}
             inputProps={{
               maxLength: 60,
+            }}
+            InputProps={{
+              endAdornment: (
+                <InputAdornment position="end">
+                  <IconButton
+                    onClick={() => setShowPrivateKey(!showPrivateKey)}
+                    onMouseDown={(e: React.MouseEvent<HTMLButtonElement>) =>
+                      e.preventDefault()
+                    }
+                    edge="end"
+                    aria-label="toggle password visibility"
+                  >
+                    {showPrivateKey ? (
+                      <span className="material-symbols-outlined">
+                        visibility
+                      </span>
+                    ) : (
+                      <span className="material-symbols-outlined">
+                        visibility_off
+                      </span>
+                    )}
+                  </IconButton>
+                </InputAdornment>
+              ),
             }}
           />
           <TextField
