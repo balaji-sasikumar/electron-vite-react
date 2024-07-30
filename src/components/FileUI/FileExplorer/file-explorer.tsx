@@ -14,14 +14,14 @@ import "./file-explorer.css";
 import { InvokeEvent } from "@/enums/invoke-event.enum";
 import AlertDialog from "../Dialog/dialog";
 import { Card, CardContent, IconButton, Typography } from "@mui/material";
-import Menu from "@mui/material/Menu";
-import MenuItem from "@mui/material/MenuItem";
 import Breadcrumbs from "@mui/material/Breadcrumbs";
 import Link from "@mui/material/Link";
 import SettingsComponent from "../Settings/settings";
 import dayjs from "dayjs";
 import SideBar from "../Sidebar/sidebar";
 import { File } from "../../../../electron/interfaces/file.interface";
+import CustomMenu from "../CustomMenu/custom-menu";
+import FolderModal from "../FolderModal/folder-modal";
 
 interface Props {
   files: File[];
@@ -36,19 +36,22 @@ const style = {
   boxShadow: 24,
   p: 4,
 };
+
 const FileExplorer: React.FC<Props> = ({ files }) => {
   const [currentDirectory, setCurrentDirectory] = useState<string>(
     (localStorage.getItem("directories") || "").split("/").pop() || ""
   );
   const [breadcrumbs, setBreadcrumbs] = useState<string[]>([]);
-  const [anchorEl, setAnchorEl] = React.useState<null | HTMLElement>(null);
-  const open = Boolean(anchorEl);
-  const handleMenuClick = (event: React.MouseEvent<HTMLElement>) => {
-    setAnchorEl(event.currentTarget);
+
+  const [createDirModalOpen, setCreateDirModalOpen] = React.useState(false);
+  const [folderName, setFolderName] = React.useState("");
+  const handleCreateDirModalClose = () => {
+    setFolderName("");
+    setCreateDirModalOpen(false);
   };
 
-  const [directoryModalOpen, setDirectoryModalOpen] = React.useState(false);
-  const [folderName, setFolderName] = React.useState("");
+  const [renameModalOpen, setRenameModalOpen] = React.useState(false);
+  const [oldName, setOldName] = React.useState("");
 
   const [settingsModalOpen, setSettingsModalOpen] = React.useState(false);
   const [showOptions, setShowOptions] = useState<boolean>(navigator.onLine);
@@ -67,11 +70,45 @@ const FileExplorer: React.FC<Props> = ({ files }) => {
     onOk: () => setModalOpen(false),
   });
 
-  const handleOpen = () => setDirectoryModalOpen(true);
-  const handleClose = () => {
-    setFolderName("");
-    setDirectoryModalOpen(false);
-  };
+  const configureMenuItems = [
+    {
+      icon: "mop",
+      label: "Clear",
+      onClick: () => {
+        localStorage.clear();
+        refresh();
+      },
+    },
+    {
+      icon: "settings",
+      label: "Configure",
+      onClick: () => {
+        setSettingsModalOpen(true);
+      },
+    },
+  ];
+
+  const fileOptionMenuItems = [
+    {
+      icon: "delete",
+      label: "Delete",
+      onClick: (file: any) => {
+        deleteDialog(file);
+      },
+    },
+    {
+      icon: "folder_managed",
+      label: "Rename",
+      onClick: (file: any) => {
+        if (file.kind === "directory") {
+          setOldName(file.name);
+          setFolderName(file.name);
+          setRenameModalOpen(true);
+        }
+      },
+    },
+  ];
+
   useEffect(() => {
     setShowOptions(navigator.onLine);
     setBreadcrumbs(
@@ -117,7 +154,18 @@ const FileExplorer: React.FC<Props> = ({ files }) => {
       directories,
       folderName
     );
-    handleClose();
+    handleCreateDirModalClose();
+  };
+
+  const renameFolder = async (oldName: any, newName: string) => {
+    const configuration = getConfigurations();
+    let directories = localStorage.getItem("directories") || "";
+    await window.ipcRenderer.invoke(
+      InvokeEvent.RenameFolder,
+      configuration,
+      directories + oldName,
+      newName
+    );
   };
 
   const openFile = async (file: any) => {
@@ -149,7 +197,7 @@ const FileExplorer: React.FC<Props> = ({ files }) => {
 
   const deleteDialog = async (file: any) => {
     setModalOpen(true);
-    setTitle("Delete File");
+    setTitle(`Delete ${file.kind === "file" ? "File" : "Folder"}`);
     setMessage(
       `Are you sure you want to delete ${
         file.kind === "file" ? "file" : "folder"
@@ -261,55 +309,6 @@ const FileExplorer: React.FC<Props> = ({ files }) => {
     );
   }
 
-  function CreateFolderModal() {
-    return (
-      <Modal
-        open={directoryModalOpen}
-        onClose={handleClose}
-        aria-labelledby="modal-modal-title"
-        aria-describedby="modal-modal-description"
-        hideBackdrop={true}
-        style={{ backdropFilter: "blur(5px)" }}
-      >
-        <Box sx={style}>
-          <div className="flex flex-col gap-3">
-            <TextField
-              id="outlined-basic"
-              label="Enter Folder Name"
-              variant="outlined"
-              value={folderName}
-              onChange={(e) => setFolderName(e.target.value)}
-              onKeyUp={(e) => {
-                if (e.key === "Enter") {
-                  createFolder();
-                }
-              }}
-              inputProps={{
-                maxLength: 30,
-              }}
-            />
-            <div className="flex flex-row gap-3">
-              <Button
-                variant="contained"
-                onClick={createFolder}
-                className="flex-1"
-              >
-                Create Folder
-              </Button>
-              <Button
-                variant="outlined"
-                onClick={handleClose}
-                className="flex-1"
-              >
-                Cancel
-              </Button>
-            </div>
-          </div>
-        </Box>
-      </Modal>
-    );
-  }
-
   function NoContentsComponent() {
     return (
       <Card
@@ -333,7 +332,7 @@ const FileExplorer: React.FC<Props> = ({ files }) => {
     );
   }
 
-  function RowComponent(row: any, isRestricted: boolean = true) {
+  function RowComponent(row: any) {
     return (
       <TableRow
         key={row.name}
@@ -372,10 +371,14 @@ const FileExplorer: React.FC<Props> = ({ files }) => {
         <TableCell>
           {formatDate(row.properties.lastModified || row.properties.createdOn)}
         </TableCell>
-        <TableCell className="cursor-pointer" onClick={() => deleteDialog(row)}>
-          <span className="material-symbols-outlined font-extralight">
-            delete
-          </span>
+        <TableCell className="cursor-pointer">
+          <CustomMenu
+            menuItems={fileOptionMenuItems.map((item) => ({
+              ...item,
+              params: [row],
+            }))}
+            menuButtonIcon="more_horiz"
+          />
         </TableCell>
       </TableRow>
     );
@@ -398,7 +401,31 @@ const FileExplorer: React.FC<Props> = ({ files }) => {
         showCancel={true}
         okText="Delete"
       />
-      {CreateFolderModal()}
+      <FolderModal
+        open={createDirModalOpen}
+        onClose={handleCreateDirModalClose}
+        folderName={folderName}
+        setFolderName={setFolderName}
+        onAction={createFolder}
+        actionLabel="Create Folder"
+      />
+
+      <FolderModal
+        open={renameModalOpen}
+        onClose={() => {
+          setRenameModalOpen(false);
+          setFolderName("");
+        }}
+        folderName={folderName}
+        setFolderName={setFolderName}
+        onAction={() => {
+          renameFolder(oldName, folderName);
+          setRenameModalOpen(false);
+          setFolderName("");
+        }}
+        actionLabel="Rename Folder"
+      />
+
       <div className="flex my-3 sticky top-0 px-2 py-4 bg-white z-10 shadow-md">
         <div className="flex items-center justify-center">
           {currentDirectory && (
@@ -418,7 +445,7 @@ const FileExplorer: React.FC<Props> = ({ files }) => {
           <Button
             variant="outlined"
             className="new-folder flex items-center justify-center gap-2 cursor-pointer"
-            onClick={handleOpen}
+            onClick={() => setCreateDirModalOpen(true)}
             disabled={!showOptions}
           >
             <span className="material-symbols-outlined">create_new_folder</span>
@@ -433,51 +460,11 @@ const FileExplorer: React.FC<Props> = ({ files }) => {
             <span className="material-symbols-outlined">upload_file</span>
             Upload File
           </Button>
-          <IconButton
-            onClick={handleMenuClick}
-            className="flex-1"
+          <CustomMenu
+            menuItems={configureMenuItems}
+            menuButtonIcon="more_vert"
             disabled={!showOptions}
-            aria-label="more"
-            id="long-button"
-            aria-controls={open ? "long-menu" : undefined}
-            aria-expanded={open ? "true" : undefined}
-            aria-haspopup="true"
-          >
-            <span className="material-symbols-outlined">more_vert</span>
-          </IconButton>
-          <Menu
-            id="long-menu"
-            MenuListProps={{
-              "aria-labelledby": "long-button",
-            }}
-            anchorEl={anchorEl}
-            open={open}
-            onClose={() => {
-              setAnchorEl(null);
-            }}
-          >
-            <MenuItem
-              onClick={async () => {
-                localStorage.clear();
-                refresh();
-                setAnchorEl(null);
-              }}
-              className="flex items-center gap-2"
-            >
-              <span className="material-symbols-outlined">mop</span>
-              Clear
-            </MenuItem>
-            <MenuItem
-              onClick={() => {
-                setSettingsModalOpen(true);
-                setAnchorEl(null);
-              }}
-              className="flex items-center gap-2"
-            >
-              <span className="material-symbols-outlined">settings</span>
-              Configure
-            </MenuItem>
-          </Menu>
+          />
         </div>
       </div>
       <div className="flex flex-row">

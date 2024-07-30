@@ -11,4 +11,6 @@ export enum InvokeEvent {
   Loading = "loading",
   GetDirectoryTree = "get-directory-tree",
   GetDirectoryTreeResponse = "get-directory-tree-response",
+  RenameFolder = "rename-folder",
+  RenameFile = "rename-file",
 }

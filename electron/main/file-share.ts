@@ -157,6 +157,42 @@ export class FileShare {
     return rootContents;
   };
 
+  renameFolder = async (
+    configuration: Configuration,
+    currentDirectoryPath: string,
+    newDirectoryName: string
+  ) => {
+    const { accountName: account, accountKey, shareName } = configuration;
+    const credential = new StorageSharedKeyCredential(account, accountKey);
+    const serviceClient = new ShareServiceClient(
+      `https://${account}.file.core.windows.net`,
+      credential
+    );
+    const shareClient = serviceClient.getShareClient(shareName);
+    const directoryClient =
+      shareClient.getDirectoryClient(currentDirectoryPath);
+    await directoryClient.rename(newDirectoryName);
+  };
+
+  renameFile = async (
+    configuration: Configuration,
+    currentDirectoryPath: string,
+    currentFileName: string,
+    newFileName: string
+  ) => {
+    const { accountName: account, accountKey, shareName } = configuration;
+    const credential = new StorageSharedKeyCredential(account, accountKey);
+    const serviceClient = new ShareServiceClient(
+      `https://${account}.file.core.windows.net`,
+      credential
+    );
+    const shareClient = serviceClient.getShareClient(shareName);
+    const directoryClient =
+      shareClient.getDirectoryClient(currentDirectoryPath);
+    const fileClient = directoryClient.getFileClient(currentFileName);
+    await fileClient.rename(newFileName);
+  };
+
   downloadFile = async (
     file: any,
     configuration: Configuration,

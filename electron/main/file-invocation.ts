@@ -258,6 +258,53 @@ export class FileInvocationHandler {
     );
     ipcEvent.sender.send(InvokeEvent.GetDirectoryTreeResponse, res);
   };
+  renameFolderHandler = async (
+    ipcEvent: Electron.IpcMainInvokeEvent,
+    configuration: any,
+    folderPath: string,
+    newFolderName: string
+  ) => {
+    try {
+      configuration = JSON.parse(configuration);
+      await this.fileShare.renameFolder(
+        configuration,
+        folderPath,
+        newFolderName
+      );
+      ipcEvent.sender.send(InvokeEvent.TryFetch, "");
+    } catch (error: any) {
+      ipcEvent.sender.send(
+        InvokeEvent.FileProcessingMessage,
+        Status.Error,
+        error?.details?.message ||
+          "An error occurred while renaming the directory"
+      );
+    }
+  };
+  renameFileHandler = async (
+    ipcEvent: Electron.IpcMainInvokeEvent,
+    configuration: any,
+    folderPath: string,
+    fileName: string,
+    newFileName: string
+  ) => {
+    try {
+      configuration = JSON.parse(configuration);
+      await this.fileShare.renameFile(
+        configuration,
+        folderPath,
+        fileName,
+        newFileName
+      );
+      ipcEvent.sender.send(InvokeEvent.TryFetch, "");
+    } catch (error: any) {
+      ipcEvent.sender.send(
+        InvokeEvent.FileProcessingMessage,
+        Status.Error,
+        error?.details?.message || "An error occurred while renaming the file"
+      );
+    }
+  };
 
   private saveAndUpload = async (
     ipcEvent: Electron.IpcMainInvokeEvent,
@@ -328,5 +375,13 @@ export function fileInvocation(win: Electron.BrowserWindow) {
   ipcMain.handle(
     InvokeEvent.GetDirectoryTree,
     fileInvocationHandler.getDirectoryTreeHandler
+  );
+  ipcMain.handle(
+    InvokeEvent.RenameFolder,
+    fileInvocationHandler.renameFolderHandler
+  );
+  ipcMain.handle(
+    InvokeEvent.RenameFile,
+    fileInvocationHandler.renameFileHandler
   );
 }
