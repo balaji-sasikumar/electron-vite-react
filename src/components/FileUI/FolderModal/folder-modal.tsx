@@ -8,6 +8,7 @@ type Props = {
   setFolderName: (folderName: string) => void;
   onAction: () => void;
   actionLabel: string;
+  textFieldLabel?: string;
 };
 
 const style = {
@@ -27,6 +28,7 @@ const FolderModal: React.FC<Props> = ({
   setFolderName,
   onAction,
   actionLabel,
+  textFieldLabel,
 }) => {
   return (
     <Modal
@@ -41,7 +43,7 @@ const FolderModal: React.FC<Props> = ({
         <div className="flex flex-col gap-3">
           <TextField
             id="outlined-basic"
-            label="Enter Folder Name"
+            label={textFieldLabel}
             variant="outlined"
             value={folderName}
             onChange={(e) => setFolderName(e.target.value)}

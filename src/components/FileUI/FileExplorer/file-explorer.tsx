@@ -6,36 +6,23 @@ import TableContainer from "@mui/material/TableContainer";
 import TableHead from "@mui/material/TableHead";
 import TableRow from "@mui/material/TableRow";
 import Paper from "@mui/material/Paper";
-import Box from "@mui/material/Box";
 import Button from "@mui/material/Button";
-import TextField from "@mui/material/TextField";
-import Modal from "@mui/material/Modal";
 import "./file-explorer.css";
 import { InvokeEvent } from "@/enums/invoke-event.enum";
 import AlertDialog from "../Dialog/dialog";
-import { Card, CardContent, IconButton, Typography } from "@mui/material";
-import Breadcrumbs from "@mui/material/Breadcrumbs";
-import Link from "@mui/material/Link";
+import { IconButton } from "@mui/material";
 import SettingsComponent from "../Settings/settings";
-import dayjs from "dayjs";
 import SideBar from "../Sidebar/sidebar";
 import { File } from "../../../../electron/interfaces/file.interface";
 import CustomMenu from "../CustomMenu/custom-menu";
 import FolderModal from "../FolderModal/folder-modal";
+import NoContentsComponent from "./no-contents";
+import RowComponent from "./row-component";
+import BreadcrumbsComponent from "./breadcrumbs";
 
 interface Props {
   files: File[];
 }
-const style = {
-  position: "absolute" as "absolute",
-  top: "50%",
-  left: "50%",
-  transform: "translate(-50%, -50%)",
-  width: 400,
-  bgcolor: "background.paper",
-  boxShadow: 24,
-  p: 4,
-};
 
 const FileExplorer: React.FC<Props> = ({ files }) => {
   const [currentDirectory, setCurrentDirectory] = useState<string>(
@@ -51,7 +38,7 @@ const FileExplorer: React.FC<Props> = ({ files }) => {
   };
 
   const [renameModalOpen, setRenameModalOpen] = React.useState(false);
-  const [oldName, setOldName] = React.useState("");
+  const [selectedRow, setSelectedRow] = React.useState<File>({} as File);
 
   const [settingsModalOpen, setSettingsModalOpen] = React.useState(false);
   const [showOptions, setShowOptions] = useState<boolean>(navigator.onLine);
@@ -100,9 +87,12 @@ const FileExplorer: React.FC<Props> = ({ files }) => {
       icon: "folder_managed",
       label: "Rename",
       onClick: (file: any) => {
+        setSelectedRow(file);
         if (file.kind === "directory") {
-          setOldName(file.name);
           setFolderName(file.name);
+          setRenameModalOpen(true);
+        } else {
+          setFolderName(file.name.split(".")[0]);
           setRenameModalOpen(true);
         }
       },
@@ -157,13 +147,25 @@ const FileExplorer: React.FC<Props> = ({ files }) => {
     handleCreateDirModalClose();
   };
 
-  const renameFolder = async (oldName: any, newName: string) => {
+  const renameFolder = async (file: any, newName: string) => {
     const configuration = getConfigurations();
     let directories = localStorage.getItem("directories") || "";
     await window.ipcRenderer.invoke(
       InvokeEvent.RenameFolder,
       configuration,
-      directories + oldName,
+      directories + file.name,
+      newName
+    );
+  };
+
+  const renameFile = async (file: any, newName: string) => {
+    const configuration = getConfigurations();
+    let directories = localStorage.getItem("directories") || "";
+    await window.ipcRenderer.invoke(
+      InvokeEvent.RenameFile,
+      configuration,
+      directories,
+      file.name,
       newName
     );
   };
@@ -248,141 +250,8 @@ const FileExplorer: React.FC<Props> = ({ files }) => {
     );
   };
 
-  function convertContentLength(contentLength: number): string {
-    if (contentLength < 1024) {
-      return contentLength + " B";
-    } else if (contentLength < 1024 * 1024) {
-      return (contentLength / 1024).toFixed(2) + " KB";
-    } else {
-      return (contentLength / (1024 * 1024)).toFixed(2) + " MB";
-    }
-  }
-
-  function formatDate(date: string): string {
-    return dayjs(date).format("DD/MM/YY hh:mm:ss A");
-  }
-
   const getConfigurations = () => localStorage.getItem("configuration");
 
-  function BreadcrumbsComponent({ breadcrumbs }: { breadcrumbs: string[] }) {
-    return (
-      <div role="presentation">
-        <Breadcrumbs aria-label="breadcrumb">
-          <Link
-            underline="hover"
-            color={breadcrumbs.length === 0 ? "textPrimary" : "inherit"}
-            onClick={() => {
-              localStorage.setItem("directories", "");
-              setCurrentDirectory("");
-              refresh();
-            }}
-            key={"home"}
-            className="cursor-pointer"
-          >
-            Home
-          </Link>
-          {breadcrumbs?.map((dir, index) => {
-            return (
-              <Link
-                underline="hover"
-                color={
-                  index === breadcrumbs.length - 1 ? "textPrimary" : "inherit"
-                }
-                onClick={() => {
-                  let directories = localStorage.getItem("directories") || "";
-                  const dirs = directories.split("/");
-                  dirs.splice(index + 1, dirs.length - index - 1);
-                  directories = dirs.join("/");
-                  setCurrentDirectory(dirs[dirs.length - 1]);
-                  localStorage.setItem("directories", directories);
-                  refresh();
-                }}
-                key={index}
-                className="cursor-pointer"
-              >
-                {dir}
-              </Link>
-            );
-          })}
-        </Breadcrumbs>
-      </div>
-    );
-  }
-
-  function NoContentsComponent() {
-    return (
-      <Card
-        variant="outlined"
-        className="my-4 flex items-center justify-center"
-      >
-        <CardContent>
-          <Typography
-            variant="h5"
-            component="h2"
-            color="textSecondary"
-            gutterBottom
-          >
-            No files or folders found in this directory.
-          </Typography>
-          <Typography variant="body1" color="textSecondary">
-            Please add some files or folders.
-          </Typography>
-        </CardContent>
-      </Card>
-    );
-  }
-
-  function RowComponent(row: any) {
-    return (
-      <TableRow
-        key={row.name}
-        sx={{ "&:last-child td, &:last-child th": { border: 0 } }}
-      >
-        <TableCell
-          component="th"
-          scope="row"
-          onClick={() => {
-            openFile(row);
-          }}
-          className="cursor-pointer"
-        >
-          <div className="flex items-center gap-4">
-            {row.kind === "directory" ? (
-              <span className="material-symbols-outlined material-symbols-fill text-yellow-400 max-w-6 max-h-6">
-                folder_open
-              </span>
-            ) : (
-              <span
-                className={`${row.name
-                  .split(".")?.[1]
-                  .toLowerCase()} max-w-6 max-h-6`}
-              ></span>
-            )}
-            {row.kind === "file" ? row.name.split(".txt")?.[0] : row.name}
-          </div>
-        </TableCell>
-        <TableCell>
-          {row.kind.charAt(0).toUpperCase() + row.kind.slice(1)}
-        </TableCell>
-        <TableCell>
-          {row.kind === "file" &&
-            convertContentLength(row.properties.contentLength)}
-        </TableCell>
-        <TableCell>
-          {formatDate(row.properties.lastModified || row.properties.createdOn)}
-        </TableCell>
-        <TableCell className="cursor-pointer">
-          <CustomMenu
-            menuItems={fileOptionMenuItems.map((item) => ({
-              ...item,
-              params: [row],
-            }))}
-            menuButtonIcon="more_horiz"
-          />
-        </TableCell>
-      </TableRow>
-    );
-  }
   return (
     <div>
       <SettingsComponent
@@ -408,6 +277,7 @@ const FileExplorer: React.FC<Props> = ({ files }) => {
         setFolderName={setFolderName}
         onAction={createFolder}
         actionLabel="Create Folder"
+        textFieldLabel="Enter Folder Name"
       />
 
       <FolderModal
@@ -419,11 +289,25 @@ const FileExplorer: React.FC<Props> = ({ files }) => {
         folderName={folderName}
         setFolderName={setFolderName}
         onAction={() => {
-          renameFolder(oldName, folderName);
+          if (selectedRow.kind === "directory") {
+            renameFolder(selectedRow, folderName);
+          } else {
+            if (folderName.includes(".")) {
+              console.log("File name cannot contain a dot");
+            } else {
+              const extension = selectedRow.name.split(".").slice(1).join(".");
+              renameFile(selectedRow, folderName + "." + extension);
+            }
+          }
           setRenameModalOpen(false);
           setFolderName("");
         }}
-        actionLabel="Rename Folder"
+        actionLabel={`Rename ${
+          selectedRow.kind === "directory" ? "Folder" : "File"
+        }`}
+        textFieldLabel={`Enter ${
+          selectedRow.kind === "directory" ? "Folder" : "File"
+        } Name`}
       />
 
       <div className="flex my-3 sticky top-0 px-2 py-4 bg-white z-10 shadow-md">
@@ -439,7 +323,11 @@ const FileExplorer: React.FC<Props> = ({ files }) => {
               chevron_left
             </IconButton>
           )}
-          <BreadcrumbsComponent breadcrumbs={breadcrumbs} />
+          <BreadcrumbsComponent
+            breadcrumbs={breadcrumbs}
+            refresh={refresh}
+            setCurrentDirectory={setCurrentDirectory}
+          />
         </div>
         <div className="ml-auto flex justify-end gap-3">
           <Button
@@ -489,7 +377,9 @@ const FileExplorer: React.FC<Props> = ({ files }) => {
                   </TableRow>
                 </TableHead>
                 <TableBody>
-                  {files.map((row: any) => RowComponent(row))}
+                  {files.map((row: any) =>
+                    RowComponent(row, fileOptionMenuItems, openFile)
+                  )}
                 </TableBody>
               </Table>
             </TableContainer>
