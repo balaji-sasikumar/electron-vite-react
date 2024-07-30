@@ -73,7 +73,7 @@ function App() {
       }
 
       window.ipcRenderer.on(
-        InvokeEvent.FileProcessing,
+        InvokeEvent.FileProcessingMessage,
         (event, title, message) => {
           setSeverity(title as any);
           setMessage(message);
@@ -90,7 +90,7 @@ function App() {
     })();
 
     return () => {
-      window.ipcRenderer.off(InvokeEvent.FileProcessing, () => {});
+      window.ipcRenderer.off(InvokeEvent.FileProcessingMessage, () => {});
       window.ipcRenderer.off(InvokeEvent.GetFileResponse, () => {});
       window.ipcRenderer.off(InvokeEvent.Loading, () => {});
       window.removeEventListener("offline", handleOffline);
