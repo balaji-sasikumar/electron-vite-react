@@ -150,7 +150,7 @@ function App() {
             showSnackBar={showSnackBar}
           />
         ) : (
-          <FileExplorer files={files} />
+          <FileExplorer files={files} showSnackBar={showSnackBar} />
         )}
       </ThemeProvider>
     </>

@@ -22,9 +22,10 @@ import BreadcrumbsComponent from "./breadcrumbs";
 
 interface Props {
   files: File[];
+  showSnackBar: (severity: any, message: string) => void;
 }
 
-const FileExplorer: React.FC<Props> = ({ files }) => {
+const FileExplorer: React.FC<Props> = ({ files, showSnackBar }) => {
   const [currentDirectory, setCurrentDirectory] = useState<string>(
     (localStorage.getItem("directories") || "").split("/").pop() || ""
   );
@@ -88,13 +89,10 @@ const FileExplorer: React.FC<Props> = ({ files }) => {
       label: "Rename",
       onClick: (file: any) => {
         setSelectedRow(file);
-        if (file.kind === "directory") {
-          setFolderName(file.name);
-          setRenameModalOpen(true);
-        } else {
-          setFolderName(file.name.split(".")[0]);
-          setRenameModalOpen(true);
-        }
+        setFolderName(
+          file.kind === "directory" ? file.name : file.name.split(".")[0]
+        );
+        setRenameModalOpen(true);
       },
     },
   ];
@@ -203,7 +201,7 @@ const FileExplorer: React.FC<Props> = ({ files }) => {
     setMessage(
       `Are you sure you want to delete ${
         file.kind === "file" ? "file" : "folder"
-      } ${file.name}?`
+      } ${file.name.split(".txt")[0]}?`
     );
     setModalBtn({
       onOk: async () => {
@@ -293,7 +291,7 @@ const FileExplorer: React.FC<Props> = ({ files }) => {
             renameFolder(selectedRow, folderName);
           } else {
             if (folderName.includes(".")) {
-              console.log("File name cannot contain a dot");
+              showSnackBar("error", "File name cannot contain a dot");
             } else {
               const extension = selectedRow.name.split(".").slice(1).join(".");
               renameFile(selectedRow, folderName + "." + extension);
