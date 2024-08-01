@@ -151,8 +151,10 @@ const FileExplorer: React.FC<Props> = ({ files, showSnackBar }) => {
     await window.ipcRenderer.invoke(
       InvokeEvent.RenameFolder,
       configuration,
-      directories + file.name,
-      newName
+      directories == ""
+        ? directories + file.name
+        : directories + "/" + file.name,
+      directories == "" ? directories + newName : directories + "/" + newName
     );
   };
 
@@ -164,7 +166,7 @@ const FileExplorer: React.FC<Props> = ({ files, showSnackBar }) => {
       configuration,
       directories,
       file.name,
-      newName
+      directories == "" ? directories + newName : directories + "/" + newName
     );
   };
 
