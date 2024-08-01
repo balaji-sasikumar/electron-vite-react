@@ -31,7 +31,7 @@ const SettingsComponent: React.FC<SettingsComponentProps> = ({
   const [accountKey, setAccountKey] = useState<string>("");
   const [shareName, setShareName] = useState<string>("");
   const [privateKey, setPrivateKey] = useState<string>("");
-  const [tempPath, setTempPath] = useState<string>("");
+  const [tempPath, setTempPath] = useState<string>("D:/");
   const [readOnly, setReadOnly] = useState<boolean>(false);
 
   const [showPrivateKey, setShowPrivateKey] = useState<boolean>(false);
@@ -160,6 +160,7 @@ const SettingsComponent: React.FC<SettingsComponentProps> = ({
                 className="flex items-center justify-center gap-2 cursor-pointer"
                 onClick={handleSave}
                 disabled={
+                  !connectionString ||
                   !accountName ||
                   !accountKey ||
                   !shareName ||
