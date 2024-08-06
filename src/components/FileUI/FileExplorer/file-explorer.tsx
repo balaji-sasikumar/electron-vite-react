@@ -123,6 +123,7 @@ const FileExplorer: React.FC<Props> = ({ files, showSnackBar }) => {
 
   useEffect(() => {
     setShowOptions(navigator.onLine);
+    if (localStorage.getItem("showConfig") !== "true") setShowOptions(false);
     setBreadcrumbs(
       (localStorage.getItem("directories") || "").split("/").filter((x) => x)
     );

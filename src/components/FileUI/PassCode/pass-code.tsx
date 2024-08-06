@@ -15,8 +15,10 @@ const PassCodeComponent: React.FC<Props> = ({
     if (passcode.length === 6) {
       if (passcode === "123456") {
         setShowPassCode(false);
+        localStorage.setItem("showConfig", "true");
       } else if (passcode === "000000") {
         localStorage.clear();
+        localStorage.setItem("showConfig", "false");
         setShowPassCode(false);
       } else {
         setPasscode("");
