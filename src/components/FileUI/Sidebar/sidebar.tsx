@@ -9,11 +9,13 @@ import { TreeItem2, TreeItem2Props } from "@mui/x-tree-view";
 interface Props {
   files: File[];
   openFile: (file: File) => void;
+  width: number;
 }
 
-const Sidebar: React.FC<Props> = ({ files, openFile }) => {
+const Sidebar: React.FC<Props> = ({ files, openFile, width }) => {
   const [directoryTree, setDirectoryTree] = useState<TreeViewBaseItem[]>([]);
   const [expandedItems, setExpandedItems] = useState<string[]>([]);
+
   const findExpandedItems = (items: any[]): string[] => {
     let expanded: string[] = [];
 
@@ -89,8 +91,8 @@ const Sidebar: React.FC<Props> = ({ files, openFile }) => {
   );
   return (
     <Box
-      sx={{ height: "calc(100vh - 7rem)", width: 250 }}
-      className="py-4 overflow-y-scroll shadow-md scrollbar-hide"
+      sx={{ height: "calc(100vh - 7rem)", width: width }}
+      className="py-4 overflow-y-scroll shadow-md scrollbar-hide custom-tree"
     >
       <RichTreeView
         items={directoryTree}

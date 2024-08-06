@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import Table from "@mui/material/Table";
 import TableBody from "@mui/material/TableBody";
 import TableCell from "@mui/material/TableCell";
@@ -57,6 +57,30 @@ const FileExplorer: React.FC<Props> = ({ files, showSnackBar }) => {
     onCancel: () => setModalOpen(false),
     onOk: () => setModalOpen(false),
   });
+
+  const [width, setWidth] = useState<number>(250);
+  const resizerRef = useRef<HTMLSpanElement | null>(null);
+  const startX = useRef<number>(0);
+  const startWidth = useRef<number>(width);
+
+  const handleMouseDown = (event: React.MouseEvent<HTMLSpanElement>) => {
+    event.preventDefault();
+    startX.current = event.clientX;
+    startWidth.current = width;
+    document.addEventListener("mousemove", handleMouseMove);
+    document.addEventListener("mouseup", handleMouseUp);
+  };
+
+  const handleMouseUp = (event: MouseEvent) => {
+    event.preventDefault();
+    document.removeEventListener("mousemove", handleMouseMove);
+    document.removeEventListener("mouseup", handleMouseUp);
+  };
+
+  const handleMouseMove = (event: MouseEvent) => {
+    const newWidth = startWidth.current + (event.clientX - startX.current);
+    setWidth(Math.max(250, Math.min(400, newWidth)));
+  };
 
   const configureMenuItems = [
     {
@@ -356,7 +380,13 @@ const FileExplorer: React.FC<Props> = ({ files, showSnackBar }) => {
         </div>
       </div>
       <div className="flex flex-row">
-        <SideBar files={files} openFile={openFile} />
+        <SideBar files={files} openFile={openFile} width={width} />
+        <span
+          role="presentation"
+          className="w-[11px] m-0 border-l-[5px] cursor-ew-resize resizer"
+          ref={resizerRef}
+          onMouseDown={handleMouseDown}
+        ></span>
         <div className="grow pl-3">
           {files.length == 0 ? (
             NoContentsComponent()
