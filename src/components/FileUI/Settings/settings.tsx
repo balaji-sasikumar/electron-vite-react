@@ -98,6 +98,9 @@ const SettingsComponent: React.FC<SettingsComponentProps> = ({
               if (match) {
                 setAccountName(match[1]);
                 setAccountKey(match[2]);
+              } else {
+                setAccountName("");
+                setAccountKey("");
               }
             }}
             required
