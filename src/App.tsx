@@ -134,6 +134,7 @@ function App() {
           open={snackBarOpen}
           onClose={() => setSnackBarOpen(false)}
           TransitionComponent={SlideTransition}
+          autoHideDuration={5000}
         >
           <Alert
             onClose={() => setSnackBarOpen(false)}

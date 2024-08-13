@@ -162,7 +162,9 @@ const FileExplorer: React.FC<Props> = ({ files, showSnackBar }) => {
   const createFolder = async () => {
     const configuration = getConfigurations();
     let directories = localStorage.getItem("directories") || "";
-    if (folderName === "") {
+    if (folderName.trim() === "") {
+      showSnackBar("error", "Folder name cannot be empty");
+      handleCreateDirModalClose();
       return;
     }
     await window.ipcRenderer.invoke(
@@ -318,6 +320,15 @@ const FileExplorer: React.FC<Props> = ({ files, showSnackBar }) => {
         folderName={folderName}
         setFolderName={setFolderName}
         onAction={() => {
+          if (folderName.trim() === "") {
+            showSnackBar(
+              "error",
+              `${
+                selectedRow.kind === "directory" ? "Folder" : "File"
+              } name cannot be empty`
+            );
+            return;
+          }
           if (selectedRow.kind === "directory") {
             renameFolder(selectedRow, folderName);
           } else {
