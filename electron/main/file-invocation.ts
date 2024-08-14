@@ -134,14 +134,19 @@ export class FileInvocationHandler {
   getFilesHandler = async (
     ipcEvent: Electron.IpcMainInvokeEvent,
     configuration: any,
-    folderName: string
+    folderName: string,
+    prefix?: string
   ) => {
     configuration = JSON.parse(configuration);
     if (!configuration) {
       ipcEvent.sender.send(InvokeEvent.GetFileResponse, []);
       return;
     }
-    const res = await this.fileShare.listFiles(configuration, folderName);
+    const res = await this.fileShare.listFiles(
+      configuration,
+      folderName,
+      prefix
+    );
     ipcEvent.sender.send(InvokeEvent.GetFileResponse, res);
   };
   openFileInvocation = async (

@@ -84,7 +84,11 @@ export class FileShare {
     });
   };
 
-  listFiles = async (configuration: Configuration, directoryName: string) => {
+  listFiles = async (
+    configuration: Configuration,
+    directoryName: string,
+    prefix?: string
+  ) => {
     const { accountName: account, accountKey, shareName } = configuration;
     const credential = new StorageSharedKeyCredential(account, accountKey);
     const serviceClient = new ShareServiceClient(
@@ -96,6 +100,7 @@ export class FileShare {
       .getDirectoryClient(directoryName);
     let iter = shareClient.listFilesAndDirectories({
       includeTimestamps: true,
+      prefix: prefix,
     });
     const fileList = [];
     for await (const item of iter) {

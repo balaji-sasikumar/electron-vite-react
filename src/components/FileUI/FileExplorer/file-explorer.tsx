@@ -10,7 +10,7 @@ import Button from "@mui/material/Button";
 import "./file-explorer.css";
 import { InvokeEvent } from "@/enums/invoke-event.enum";
 import AlertDialog from "../Dialog/dialog";
-import { IconButton } from "@mui/material";
+import { IconButton, InputAdornment, TextField } from "@mui/material";
 import SettingsComponent from "../Settings/settings";
 import SideBar from "../Sidebar/sidebar";
 import { File } from "../../../../electron/interfaces/file.interface";
@@ -139,14 +139,23 @@ const FileExplorer: React.FC<Props> = ({ files, showSnackBar }) => {
     };
   }, [files]);
 
-  const refresh = async () => {
-    const configuration = getConfigurations();
-    let directories = localStorage.getItem("directories") || "";
+  const getFiles = async (
+    configuration: string | null,
+    directories: string,
+    prefix?: string
+  ) => {
     await window.ipcRenderer.invoke(
       InvokeEvent.GetFiles,
       configuration,
-      directories
+      directories,
+      prefix
     );
+  };
+
+  const refresh = async () => {
+    const configuration = getConfigurations();
+    let directories = localStorage.getItem("directories") || "";
+    await getFiles(configuration, directories);
   };
 
   const goBack = async () => {
@@ -212,11 +221,7 @@ const FileExplorer: React.FC<Props> = ({ files, showSnackBar }) => {
       directories += file.name;
       setCurrentDirectory(file.name);
       localStorage.setItem("directories", directories);
-      await window.ipcRenderer.invoke(
-        InvokeEvent.GetFiles,
-        configuration,
-        directories
-      );
+      refresh();
       return;
     }
 
@@ -388,6 +393,30 @@ const FileExplorer: React.FC<Props> = ({ files, showSnackBar }) => {
             <span className="material-symbols-outlined">upload_file</span>
             Upload File
           </Button>
+          <TextField
+            id="outlined-basic"
+            label="Search"
+            variant="outlined"
+            disabled={!showOptions}
+            size="small"
+            onChange={async (e) => {
+              await getFiles(
+                getConfigurations(),
+                localStorage.getItem("directories") || "",
+                e.target.value
+              );
+            }}
+            InputProps={{
+              startAdornment: (
+                <InputAdornment position="start">
+                  <span className="material-symbols-outlined">search</span>
+                </InputAdornment>
+              ),
+            }}
+            inputProps={{
+              maxLength: 10,
+            }}
+          ></TextField>
           <CustomMenu
             menuItems={configureMenuItems}
             menuButtonIcon="more_vert"
