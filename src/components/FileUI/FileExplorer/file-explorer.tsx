@@ -170,7 +170,6 @@ const FileExplorer: React.FC<Props> = ({ files, showSnackBar }) => {
     let directories = localStorage.getItem("directories") || "";
     if (folderName.trim() === "") {
       showSnackBar("error", "Folder name cannot be empty");
-      handleCreateDirModalClose();
       return;
     }
     await window.ipcRenderer.invoke(
