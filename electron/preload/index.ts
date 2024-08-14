@@ -4,9 +4,9 @@ contextBridge.exposeInMainWorld("ipcRenderer", {
     const [channel, listener] = args;
     ipcRenderer.on(channel, (event, ...args) => listener(event, ...args));
   },
-  off(...args: Parameters<typeof ipcRenderer.off>) {
-    const [channel, ...omit] = args;
-    ipcRenderer.off(channel, ...omit);
+  off(...args: Parameters<typeof ipcRenderer.removeAllListeners>) {
+    const [channel] = args;
+    ipcRenderer.removeAllListeners(channel);
   },
   send(...args: Parameters<typeof ipcRenderer.send>) {
     const [channel, ...omit] = args;
@@ -15,6 +15,13 @@ contextBridge.exposeInMainWorld("ipcRenderer", {
   invoke(...args: Parameters<typeof ipcRenderer.invoke>) {
     const [channel, ...omit] = args;
     ipcRenderer.invoke(channel, ...omit);
+  },
+  getAllListenersWithCount() {
+    let record = new Map<string, number>();
+    ipcRenderer.eventNames().forEach((e) => {
+      record.set(e.toString(), ipcRenderer.listenerCount(e));
+    });
+    console.log(record);
   },
 });
 contextBridge.exposeInMainWorld("electron", {

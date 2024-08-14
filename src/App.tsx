@@ -116,6 +116,7 @@ function App() {
       window.ipcRenderer.off(InvokeEvent.FileProcessingMessage, () => {});
       window.ipcRenderer.off(InvokeEvent.GetFileResponse, () => {});
       window.ipcRenderer.off(InvokeEvent.Loading, () => {});
+      window.ipcRenderer.off("app-state-changed", () => {});
       window.removeEventListener("offline", handleOffline);
       window.removeEventListener("online", handleOnline);
     };

@@ -64,6 +64,9 @@ const Sidebar: React.FC<Props> = ({ files, openFile, width }) => {
         setDirectoryTree(tree);
       }
     );
+    return () => {
+      window.ipcRenderer.off(InvokeEvent.GetDirectoryTreeResponse, () => {});
+    };
   }, [files]);
 
   useEffect(() => {
