@@ -102,13 +102,6 @@ const FileExplorer: React.FC<Props> = ({ files, showSnackBar }) => {
 
   const fileOptionMenuItems = [
     {
-      icon: "delete",
-      label: "Delete",
-      onClick: (file: any) => {
-        deleteDialog(file);
-      },
-    },
-    {
       icon: "folder_managed",
       label: "Rename",
       onClick: (file: any) => {
@@ -117,6 +110,13 @@ const FileExplorer: React.FC<Props> = ({ files, showSnackBar }) => {
           file.kind === "directory" ? file.name : file.name.split(".")[0]
         );
         setRenameModalOpen(true);
+      },
+    },
+    {
+      icon: "delete",
+      label: "Delete",
+      onClick: (file: any) => {
+        deleteDialog(file);
       },
     },
   ];
