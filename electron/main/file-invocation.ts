@@ -15,6 +15,7 @@ let onlineStatus: boolean;
 export class FileInvocationHandler {
   fileShare = FileShare.getInstance();
   openFilesMap = new Map<string, string>();
+  openFoldersMap = new Map<string, number>();
   private constructor() {}
 
   deleteFileHandler = async (
@@ -24,6 +25,15 @@ export class FileInvocationHandler {
     fileName: string
   ) => {
     try {
+      if (this.openFilesMap.has(folderName + "/" + fileName)) {
+        ipcEvent.sender.send(
+          InvokeEvent.FileProcessingMessage,
+          Status.Error,
+          "Please close the file before deleting"
+        );
+        return;
+      }
+
       configuration = JSON.parse(configuration);
       await this.fileShare.deleteFile(configuration, folderName, fileName);
       ipcEvent.sender.send(InvokeEvent.TryFetch, "");
@@ -99,6 +109,7 @@ export class FileInvocationHandler {
       let selectedPath = filePaths.filePaths[0];
       let toPath = this.fileShare.getSharedStoragePath(
         configuration.tempPath,
+        directories,
         path.basename(selectedPath) + ".txt"
       );
 
@@ -137,17 +148,25 @@ export class FileInvocationHandler {
     folderName: string,
     prefix?: string
   ) => {
-    configuration = JSON.parse(configuration);
-    if (!configuration) {
-      ipcEvent.sender.send(InvokeEvent.GetFileResponse, []);
-      return;
+    try {
+      configuration = JSON.parse(configuration);
+      if (!configuration) {
+        ipcEvent.sender.send(InvokeEvent.GetFileResponse, []);
+        return;
+      }
+      const res = await this.fileShare.listFiles(
+        configuration,
+        folderName,
+        prefix
+      );
+      ipcEvent.sender.send(InvokeEvent.GetFileResponse, res);
+    } catch (error: any) {
+      ipcEvent.sender.send(
+        InvokeEvent.FileProcessingMessage,
+        Status.Error,
+        error?.details?.message || "An error occurred while fetching the files"
+      );
     }
-    const res = await this.fileShare.listFiles(
-      configuration,
-      folderName,
-      prefix
-    );
-    ipcEvent.sender.send(InvokeEvent.GetFileResponse, res);
   };
   openFileInvocation = async (
     ipcEvent: Electron.IpcMainInvokeEvent,
@@ -169,9 +188,10 @@ export class FileInvocationHandler {
       }
       let viewPath = this.fileShare.getSharedStoragePath(
         configuration.tempPath,
+        directories,
         file.name.split(".txt")[0]
       );
-      if (this.openFilesMap.has(file.name)) {
+      if (this.openFilesMap.has(directories + "/" + file.name)) {
         this.loadingHandler(ipcEvent, false);
         ipcEvent.sender.send(
           InvokeEvent.FileProcessingMessage,
@@ -180,7 +200,12 @@ export class FileInvocationHandler {
         );
         return;
       }
-      this.openFilesMap.set(file.name, "Opening");
+      this.openFilesMap.set(directories + "/" + file.name, "Opening");
+      this.openFoldersMap.set(
+        directories,
+        (this.openFoldersMap.get(directories) ?? 0) + 1
+      );
+      console.log(this.openFoldersMap);
 
       let fileData = await this.fileShare.downloadFile(
         file,
@@ -198,7 +223,11 @@ export class FileInvocationHandler {
           Status.Error,
           `The file ${path.basename(viewPath)} is not in the correct format`
         );
-        this.openFilesMap.delete(file.name);
+        this.openFilesMap.delete(directories + "/" + file.name);
+        this.openFoldersMap.set(
+          directories,
+          (this.openFoldersMap.get(directories) ?? 0) - 1
+        );
         return;
       }
       const base64Data = decrypted.split(",")[1];
@@ -215,7 +244,7 @@ export class FileInvocationHandler {
         let isFileOpen = await this.fileShare
           .isFileOpened(paths)
           .catch(() => false);
-        this.openFilesMap.set(file.name, "Opened");
+        this.openFilesMap.set(directories + "/" + file.name, "Opened");
 
         if (!isFileOpen) {
           if (isEditable) {
@@ -231,13 +260,21 @@ export class FileInvocationHandler {
           clearInterval(intervalId);
           ipcEvent.sender.send(InvokeEvent.TryFetch, "");
           this.loadingHandler(ipcEvent, false);
-          this.openFilesMap.delete(file.name);
+          this.openFilesMap.delete(directories + "/" + file.name);
+          this.openFoldersMap.set(
+            directories,
+            (this.openFoldersMap.get(directories) ?? 0) - 1
+          );
         }
       }, 5000);
     } catch (error: any) {
       console.log(error);
       this.loadingHandler(ipcEvent, false);
-      this.openFilesMap.delete(file.name);
+      this.openFilesMap.delete(directories + "/" + file.name);
+      this.openFoldersMap.set(
+        directories,
+        (this.openFoldersMap.get(directories) ?? 0) - 1
+      );
       ipcEvent.sender.send(
         InvokeEvent.FileProcessingMessage,
         Status.Error,
@@ -256,12 +293,16 @@ export class FileInvocationHandler {
     configuration: any,
     folderPath: string
   ) => {
-    configuration = JSON.parse(configuration);
-    const res = await this.fileShare.getDirectoryTree(
-      configuration,
-      folderPath
-    );
-    ipcEvent.sender.send(InvokeEvent.GetDirectoryTreeResponse, res);
+    try {
+      configuration = JSON.parse(configuration);
+      const res = await this.fileShare.getDirectoryTree(
+        configuration,
+        folderPath
+      );
+      ipcEvent.sender.send(InvokeEvent.GetDirectoryTreeResponse, res);
+    } catch (error: any) {
+      ipcEvent.sender.send(InvokeEvent.GetDirectoryTreeResponse, []);
+    }
   };
   renameFolderHandler = async (
     ipcEvent: Electron.IpcMainInvokeEvent,
@@ -270,6 +311,14 @@ export class FileInvocationHandler {
     newFolderName: string
   ) => {
     try {
+      if ((this.openFoldersMap.get(folderPath) ?? 0) > 0) {
+        ipcEvent.sender.send(
+          InvokeEvent.FileProcessingMessage,
+          Status.Error,
+          "Please close the file before renaming the directory"
+        );
+        return;
+      }
       configuration = JSON.parse(configuration);
       await this.fileShare.renameFolder(
         configuration,
@@ -294,6 +343,14 @@ export class FileInvocationHandler {
     newFileName: string
   ) => {
     try {
+      if (this.openFilesMap.has(folderPath + "/" + fileName)) {
+        ipcEvent.sender.send(
+          InvokeEvent.FileProcessingMessage,
+          Status.Error,
+          "Please close the file before renaming"
+        );
+        return;
+      }
       configuration = JSON.parse(configuration);
       await this.fileShare.renameFile(
         configuration,

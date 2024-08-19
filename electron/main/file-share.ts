@@ -306,8 +306,12 @@ export class FileShare {
     }
   };
 
-  getSharedStoragePath = (directoryPath: string, fileName: string) => {
-    return path.join(directoryPath, tempFolder, fileName);
+  getSharedStoragePath = (
+    directoryPath: string,
+    directories: string = "",
+    fileName: string
+  ) => {
+    return path.join(directoryPath, tempFolder, directories, fileName);
   };
 
   private convertFileToBase64 = (filePath: string): string => {
