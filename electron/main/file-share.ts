@@ -65,20 +65,57 @@ export class FileShare {
     key: string
   ) => {
     try {
-      const base64Data = this.convertFileToBase64(fromPath);
-      const dataURL = `data:${mime.getType(fromPath)};base64,${base64Data}`;
-      const encrypted = this.encryptFile(dataURL, key);
-      fs.mkdirSync(path.dirname(toPath), { recursive: true });
-      fs.writeFileSync(toPath, encrypted);
+      return new Promise<void>((resolve, reject) => {
+        try {
+          const readStream = fs.createReadStream(fromPath, {
+            highWaterMark: chunkSize,
+          });
+          fs.mkdirSync(path.dirname(toPath), { recursive: true });
+          const writeStream = fs.createWriteStream(toPath);
+          let firstChunk = true;
+          let encChunk, chunkToEncrypt: string;
+          readStream.on("data", (chunk: any) => {
+            readStream.pause();
+            if (firstChunk) {
+              chunkToEncrypt = `data:${mime.getType(
+                fromPath
+              )};base64,${chunk.toString("base64")}`;
+              firstChunk = false;
+            } else {
+              chunkToEncrypt = chunk.toString("base64");
+            }
+            encChunk = this.encryptionAES(chunkToEncrypt, key);
+            writeStream.write(encChunk + chunkSeparator, () => {
+              readStream.resume();
+            });
+          });
+
+          readStream.on("end", () => {
+            // console.log(fs.statSync(toPath).size, "size");
+            writeStream.end();
+            resolve();
+          });
+
+          readStream.on("error", (error) => {
+            reject(error);
+          });
+
+          writeStream.on("error", (error) => {
+            reject(error);
+          });
+        } catch (error) {
+          reject(error);
+        }
+      });
     } catch (err) {
       console.error("Error writing file:", err);
     }
   };
 
-  openFile = async (newPath: string, base64Data: string) => {
+  openFile = async (newPath: string, base64Data: any) => {
     const directoryPath = path.dirname(newPath);
     fs.mkdirSync(directoryPath, { recursive: true });
-    fs.writeFileSync(newPath, base64Data, { encoding: "base64" });
+    fs.writeFileSync(newPath, base64Data);
     await shell.openPath(newPath).catch((err) => {
       console.error("Error opening file:", err);
     });

@@ -212,9 +212,11 @@ export class FileInvocationHandler {
         configuration,
         directories
       );
+      console.log(fileData.length, "downloaded content len", typeof fileData);
 
       let key = configuration.privateKey;
-      let decrypted = this.fileShare.decryptFile(fileData.toString(), key);
+      let decrypted = this.fileShare.decryptFile(fileData, key);
+      console.log(decrypted.length, "decrypted content len", typeof decrypted);
 
       if (decrypted === DATA_FORMAT_NOT_SUPPORTED) {
         this.loadingHandler(ipcEvent, false);
@@ -230,7 +232,10 @@ export class FileInvocationHandler {
         );
         return;
       }
-      const base64Data = decrypted.split(",")[1];
+      const base64Data = Buffer.from(decrypted.split(",")[1], "base64");
+      // const base64Data = decrypted.split(",")[1];
+      console.log(base64Data.length, "base64Data.length");
+
       await this.fileShare.openFile(viewPath, base64Data);
 
       this.loadingHandler(ipcEvent, false);
@@ -375,32 +380,40 @@ export class FileInvocationHandler {
     configuration: Configuration,
     directories: string
   ) => {
-    this.loadingHandler(ipcEvent, true);
-    if (!onlineStatus) {
+    try {
+      this.loadingHandler(ipcEvent, true);
+      if (!onlineStatus) {
+        this.loadingHandler(ipcEvent, false);
+        ipcEvent.sender.send(
+          InvokeEvent.FileProcessingMessage,
+          Status.Error,
+          `File ${file.name} cannot be saved in offline mode`
+        );
+        return;
+      }
+      // filePath is the path of the file that is being opened
+      const encryptedPath = filePath + ".txt";
+
+      await this.fileShare.encryptAndSaveFile(
+        filePath,
+        encryptedPath,
+        configuration.privateKey as string
+      );
+      await this.fileShare.uploadFile(
+        file.name,
+        encryptedPath,
+        configuration,
+        directories
+      );
+      this.fileShare.removeFileFromTempPath(encryptedPath);
       this.loadingHandler(ipcEvent, false);
+    } catch (error: any) {
       ipcEvent.sender.send(
         InvokeEvent.FileProcessingMessage,
         Status.Error,
-        `File ${file.name} cannot be saved in offline mode`
+        error?.details?.message || "An error occurred while saving the file"
       );
-      return;
     }
-    // filePath is the path of the file that is being opened
-    const encryptedPath = filePath + ".txt";
-
-    await this.fileShare.encryptAndSaveFile(
-      filePath,
-      encryptedPath,
-      configuration.privateKey as string
-    );
-    await this.fileShare.uploadFile(
-      file.name,
-      encryptedPath,
-      configuration,
-      directories
-    );
-    this.fileShare.removeFileFromTempPath(encryptedPath);
-    this.loadingHandler(ipcEvent, false);
   };
 
   public static getInstance() {
