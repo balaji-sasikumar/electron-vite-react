@@ -1,11 +1,7 @@
 import { ipcMain } from "electron";
 import { dialog } from "electron";
 import * as path from "path";
-import {
-  DATA_FORMAT_NOT_SUPPORTED,
-  editableExtensions,
-  supportedExtensions,
-} from "./utils";
+import { editableExtensions, supportedExtensions } from "./utils";
 import { InvokeEvent } from "../../src/enums/invoke-event.enum";
 import { FileShare } from "./file-share";
 import { Status } from "../../src/enums/status.enum";
@@ -26,12 +22,7 @@ export class FileInvocationHandler {
   ) => {
     try {
       if (this.openFilesMap.has(folderName + "/" + fileName)) {
-        ipcEvent.sender.send(
-          InvokeEvent.FileProcessingMessage,
-          Status.Error,
-          "Please close the file before deleting"
-        );
-        return;
+        throw new Error("Please close the file before deleting");
       }
 
       configuration = JSON.parse(configuration);
@@ -41,7 +32,9 @@ export class FileInvocationHandler {
       ipcEvent.sender.send(
         InvokeEvent.FileProcessingMessage,
         Status.Error,
-        error?.details?.message || "An error occurred while deleting the file"
+        error?.details?.message ||
+          error.message ||
+          "An error occurred while deleting the file"
       );
     }
   };
@@ -174,38 +167,32 @@ export class FileInvocationHandler {
     configuration: any,
     directories: string
   ) => {
+    let downloadedLocation: string = "",
+      viewPath: string = "";
     try {
       this.loadingHandler(ipcEvent, true);
       configuration = JSON.parse(configuration);
       if (!file.name.endsWith(".txt") && !file.name.endsWith(".gz")) {
-        ipcEvent.sender.send(
-          InvokeEvent.FileProcessingMessage,
-          Status.Error,
-          `The file ${file.name} is not supported for opening`
-        );
-        this.loadingHandler(ipcEvent, false);
-        return;
+        throw new Error(`The file ${file.name} is not supported for opening`);
       }
-      let viewPath = this.fileShare.getSharedStoragePath(
+
+      viewPath = this.fileShare.getSharedStoragePath(
         configuration.tempPath,
         directories,
         file.name.split(".txt")[0]
       );
+
       if (this.openFilesMap.has(directories + "/" + file.name)) {
-        this.loadingHandler(ipcEvent, false);
-        ipcEvent.sender.send(
-          InvokeEvent.FileProcessingMessage,
-          Status.Error,
+        throw new Error(
           `The file ${path.basename(viewPath)} is already opened`
         );
-        return;
       }
+
       this.openFilesMap.set(directories + "/" + file.name, "Opening");
       this.openFoldersMap.set(
         directories,
         (this.openFoldersMap.get(directories) ?? 0) + 1
       );
-      console.log(this.openFoldersMap);
 
       await this.fileShare.downloadFile(
         file,
@@ -213,34 +200,35 @@ export class FileInvocationHandler {
         directories,
         viewPath
       );
-      let downloadedLocation = path.join(
+      downloadedLocation = path.join(
         path.dirname(viewPath),
         file.name.replace(".gz", "")
       );
-
       let key = configuration.privateKey;
 
-      await this.fileShare.decryptAndSaveFile(
-        downloadedLocation,
-        viewPath,
-        key
-      );
+      await this.fileShare
+        .decryptAndSaveFile(downloadedLocation, viewPath, key)
+        .catch((_error) => {
+          throw new Error(
+            `The file ${path.basename(viewPath)} is not in the correct format`
+          );
+        });
       await this.fileShare.openFile(viewPath);
+
+      // Clean up the downloaded file
       this.fileShare.removeFileFromTempPath(downloadedLocation);
 
       this.loadingHandler(ipcEvent, false);
       const actualExt = file.name.split(".")[1].toLowerCase();
       let isEditable = editableExtensions.includes(actualExt);
-
       let paths = [viewPath];
-      let intervalId: NodeJS.Timeout;
 
-      intervalId = setInterval(async () => {
+      // Monitor the file to check if it's still open
+      const intervalId = setInterval(async () => {
         let isFileOpen = await this.fileShare
           .isFileOpened(paths)
           .catch(() => false);
-        this.openFilesMap.set(directories + "/" + file.name, "Opened");
-        console.log("isFileOpen", isFileOpen);
+
         if (!isFileOpen) {
           clearInterval(intervalId);
           if (isEditable) {
@@ -263,17 +251,22 @@ export class FileInvocationHandler {
         }
       }, 5000);
     } catch (error: any) {
-      console.log(error);
+      console.error("Error:", error);
       this.loadingHandler(ipcEvent, false);
       this.openFilesMap.delete(directories + "/" + file.name);
       this.openFoldersMap.set(
         directories,
         (this.openFoldersMap.get(directories) ?? 0) - 1
       );
+      downloadedLocation &&
+        this.fileShare.removeFileFromTempPath(downloadedLocation);
+      viewPath && this.fileShare.removeFileFromTempPath(viewPath);
       ipcEvent.sender.send(
         InvokeEvent.FileProcessingMessage,
         Status.Error,
-        error?.details?.message || "An error occurred while opening the file"
+        error?.details?.message ||
+          error.message ||
+          "An error occurred while opening the file"
       );
     }
   };
@@ -307,12 +300,7 @@ export class FileInvocationHandler {
   ) => {
     try {
       if ((this.openFoldersMap.get(folderPath) ?? 0) > 0) {
-        ipcEvent.sender.send(
-          InvokeEvent.FileProcessingMessage,
-          Status.Error,
-          "Please close the file before renaming the directory"
-        );
-        return;
+        throw new Error("Please close all files before renaming the directory");
       }
       configuration = JSON.parse(configuration);
       await this.fileShare.renameFolder(
@@ -326,6 +314,7 @@ export class FileInvocationHandler {
         InvokeEvent.FileProcessingMessage,
         Status.Error,
         error?.details?.message ||
+          error.message ||
           "An error occurred while renaming the directory"
       );
     }
@@ -339,12 +328,7 @@ export class FileInvocationHandler {
   ) => {
     try {
       if (this.openFilesMap.has(folderPath + "/" + fileName)) {
-        ipcEvent.sender.send(
-          InvokeEvent.FileProcessingMessage,
-          Status.Error,
-          "Please close the file before renaming"
-        );
-        return;
+        throw new Error("Please close the file before renaming");
       }
       configuration = JSON.parse(configuration);
       await this.fileShare.renameFile(
@@ -358,7 +342,9 @@ export class FileInvocationHandler {
       ipcEvent.sender.send(
         InvokeEvent.FileProcessingMessage,
         Status.Error,
-        error?.details?.message || "An error occurred while renaming the file"
+        error?.details?.message ||
+          error.message ||
+          "An error occurred while renaming the file"
       );
     }
   };
@@ -374,12 +360,7 @@ export class FileInvocationHandler {
       this.loadingHandler(ipcEvent, true);
       if (!onlineStatus) {
         this.loadingHandler(ipcEvent, false);
-        ipcEvent.sender.send(
-          InvokeEvent.FileProcessingMessage,
-          Status.Error,
-          `File ${file.name} cannot be saved in offline mode`
-        );
-        return;
+        throw new Error(`File ${file.name} cannot be saved in offline mode`);
       }
       // filePath is the path of the file that is being opened
       const encryptedPath = filePath + ".txt";
@@ -401,7 +382,9 @@ export class FileInvocationHandler {
       ipcEvent.sender.send(
         InvokeEvent.FileProcessingMessage,
         Status.Error,
-        error?.details?.message || "An error occurred while saving the file"
+        error?.details?.message ||
+          error.message ||
+          "An error occurred while saving the file"
       );
     }
   };
@@ -415,38 +398,25 @@ export function fileInvocation(win: Electron.BrowserWindow) {
   const fileInvocationHandler: FileInvocationHandler =
     FileInvocationHandler.getInstance();
 
+  const handlerRecord: Record<string, any> = {
+    [InvokeEvent.DeleteFile]: fileInvocationHandler.deleteFileHandler,
+    [InvokeEvent.CreateDirectory]: fileInvocationHandler.createDirectoryHandler,
+    [InvokeEvent.DeleteDirectory]: fileInvocationHandler.deleteDirectoryHandler,
+    [InvokeEvent.UploadFromPC]: fileInvocationHandler.uploadHandler,
+    [InvokeEvent.GetFiles]: fileInvocationHandler.getFilesHandler,
+    [InvokeEvent.OpenFile]: fileInvocationHandler.openFileInvocation,
+    [InvokeEvent.Loading]: fileInvocationHandler.loadingHandler,
+    [InvokeEvent.GetDirectoryTree]:
+      fileInvocationHandler.getDirectoryTreeHandler,
+    [InvokeEvent.RenameFolder]: fileInvocationHandler.renameFolderHandler,
+    [InvokeEvent.RenameFile]: fileInvocationHandler.renameFileHandler,
+  };
+
   ipcMain.on("online-status", (event, status) => {
     onlineStatus = status;
   });
-  ipcMain.handle(
-    InvokeEvent.DeleteFile,
-    fileInvocationHandler.deleteFileHandler
-  );
-  ipcMain.handle(
-    InvokeEvent.CreateDirectory,
-    fileInvocationHandler.createDirectoryHandler
-  );
-  ipcMain.handle(
-    InvokeEvent.DeleteDirectory,
-    fileInvocationHandler.deleteDirectoryHandler
-  );
-  ipcMain.handle(InvokeEvent.UploadFromPC, fileInvocationHandler.uploadHandler);
-  ipcMain.handle(InvokeEvent.GetFiles, fileInvocationHandler.getFilesHandler);
-  ipcMain.handle(
-    InvokeEvent.OpenFile,
-    fileInvocationHandler.openFileInvocation
-  );
-  ipcMain.handle(InvokeEvent.Loading, fileInvocationHandler.loadingHandler);
-  ipcMain.handle(
-    InvokeEvent.GetDirectoryTree,
-    fileInvocationHandler.getDirectoryTreeHandler
-  );
-  ipcMain.handle(
-    InvokeEvent.RenameFolder,
-    fileInvocationHandler.renameFolderHandler
-  );
-  ipcMain.handle(
-    InvokeEvent.RenameFile,
-    fileInvocationHandler.renameFileHandler
-  );
+
+  for (const [key, value] of Object.entries(handlerRecord)) {
+    ipcMain.handle(key, value);
+  }
 }
