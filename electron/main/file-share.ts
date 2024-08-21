@@ -399,11 +399,12 @@ export class FileShare {
   };
 
   removeFileFromTempPath = (filePath: string) => {
-    try {
-      fs.unlinkSync(filePath);
-    } catch (err) {
-      console.error("Error removing file:", err);
-    }
+    fs.unlink(filePath, (err) => {
+      if (err) {
+        console.error("Error removing file:", err);
+      }
+      console.log("File removed successfully");
+    });
   };
 
   getSharedStoragePath = (
@@ -412,28 +413,6 @@ export class FileShare {
     fileName: string
   ) => {
     return path.join(directoryPath, tempFolder, directories, fileName);
-  };
-
-  private convertFileToBase64 = (filePath: string): string => {
-    const data = fs.readFileSync(filePath);
-    return Buffer.from(data).toString("base64");
-  };
-
-  private encryptFile = (fileDataUrl: string, key: string) => {
-    const encryptedChunks = [];
-    const totalChunks = Math.ceil(fileDataUrl.length / chunkSize);
-
-    for (let chunkIndex = 0; chunkIndex < totalChunks; chunkIndex++) {
-      const start = chunkIndex * chunkSize;
-      const end = start + chunkSize;
-      const chunk = fileDataUrl.substring(start, end);
-
-      const encChunk = this.encryptionAES(chunk, key);
-      encryptedChunks.push(encChunk);
-    }
-
-    const joinedEncryptedData = encryptedChunks.join(chunkSeparator);
-    return joinedEncryptedData;
   };
 
   private encryptionAES(msg: string, key: string) {

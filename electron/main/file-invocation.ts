@@ -168,7 +168,17 @@ export class FileInvocationHandler {
     directories: string
   ) => {
     let downloadedLocation: string = "",
-      viewPath: string = "";
+      viewPath: string = "",
+      directoryParts = directories.split("/");
+    const modifyFoldersMap = (directoryParts: string[], value: number) => {
+      for (let i = 0; i < directoryParts.length; i++) {
+        let currentPath = directoryParts.slice(0, i + 1).join("/");
+        this.openFoldersMap.set(
+          currentPath,
+          (this.openFoldersMap.get(currentPath) ?? 0) + value
+        );
+      }
+    };
     try {
       this.loadingHandler(ipcEvent, true);
       configuration = JSON.parse(configuration);
@@ -189,10 +199,8 @@ export class FileInvocationHandler {
       }
 
       this.openFilesMap.set(directories + "/" + file.name, "Opening");
-      this.openFoldersMap.set(
-        directories,
-        (this.openFoldersMap.get(directories) ?? 0) + 1
-      );
+
+      modifyFoldersMap(directoryParts, 1);
 
       await this.fileShare.downloadFile(
         file,
@@ -244,23 +252,12 @@ export class FileInvocationHandler {
           ipcEvent.sender.send(InvokeEvent.TryFetch, "");
           this.loadingHandler(ipcEvent, false);
           this.openFilesMap.delete(directories + "/" + file.name);
-          this.openFoldersMap.set(
-            directories,
-            (this.openFoldersMap.get(directories) ?? 0) - 1
-          );
+          modifyFoldersMap(directoryParts, -1);
         }
       }, 5000);
     } catch (error: any) {
       console.error("Error:", error);
       this.loadingHandler(ipcEvent, false);
-      this.openFilesMap.delete(directories + "/" + file.name);
-      this.openFoldersMap.set(
-        directories,
-        (this.openFoldersMap.get(directories) ?? 0) - 1
-      );
-      downloadedLocation &&
-        this.fileShare.removeFileFromTempPath(downloadedLocation);
-      viewPath && this.fileShare.removeFileFromTempPath(viewPath);
       ipcEvent.sender.send(
         InvokeEvent.FileProcessingMessage,
         Status.Error,
@@ -268,6 +265,11 @@ export class FileInvocationHandler {
           error.message ||
           "An error occurred while opening the file"
       );
+      this.openFilesMap.delete(directories + "/" + file.name);
+      modifyFoldersMap(directoryParts, -1);
+      downloadedLocation &&
+        this.fileShare.removeFileFromTempPath(downloadedLocation);
+      viewPath && this.fileShare.removeFileFromTempPath(viewPath);
     }
   };
   loadingHandler = (
