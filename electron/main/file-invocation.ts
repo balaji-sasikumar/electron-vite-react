@@ -207,36 +207,48 @@ export class FileInvocationHandler {
       );
       console.log(this.openFoldersMap);
 
-      let fileData = await this.fileShare.downloadFile(
+      await this.fileShare.downloadFile(
         file,
         configuration,
-        directories
+        directories,
+        viewPath
       );
-      console.log(fileData.length, "downloaded content len", typeof fileData);
+      let downloadedLocation = path.join(
+        path.dirname(viewPath),
+        file.name.replace(".gz", "")
+      );
 
       let key = configuration.privateKey;
-      let decrypted = this.fileShare.decryptFile(fileData, key);
-      console.log(decrypted.length, "decrypted content len", typeof decrypted);
 
-      if (decrypted === DATA_FORMAT_NOT_SUPPORTED) {
-        this.loadingHandler(ipcEvent, false);
-        ipcEvent.sender.send(
-          InvokeEvent.FileProcessingMessage,
-          Status.Error,
-          `The file ${path.basename(viewPath)} is not in the correct format`
-        );
-        this.openFilesMap.delete(directories + "/" + file.name);
-        this.openFoldersMap.set(
-          directories,
-          (this.openFoldersMap.get(directories) ?? 0) - 1
-        );
-        return;
-      }
-      const base64Data = Buffer.from(decrypted.split(",")[1], "base64");
+      await this.fileShare.decryptAndSaveFile(
+        downloadedLocation,
+        viewPath,
+        key
+      );
+
+      // let decrypted = this.fileShare.decryptFile(fileData, key);
+      // console.log(decrypted.length, "decrypted content len", typeof decrypted);
+
+      // if (decrypted === DATA_FORMAT_NOT_SUPPORTED) {
+      //   this.loadingHandler(ipcEvent, false);
+      //   ipcEvent.sender.send(
+      //     InvokeEvent.FileProcessingMessage,
+      //     Status.Error,
+      //     `The file ${path.basename(viewPath)} is not in the correct format`
+      //   );
+      //   this.openFilesMap.delete(directories + "/" + file.name);
+      //   this.openFoldersMap.set(
+      //     directories,
+      //     (this.openFoldersMap.get(directories) ?? 0) - 1
+      //   );
+      //   return;
+      // }
+      // const base64Data = Buffer.from(decrypted.split(",")[1], "base64");
       // const base64Data = decrypted.split(",")[1];
-      console.log(base64Data.length, "base64Data.length");
+      // console.log(base64Data.length, "base64Data.length");
 
-      await this.fileShare.openFile(viewPath, base64Data);
+      await this.fileShare.openFile(viewPath);
+      this.fileShare.removeFileFromTempPath(downloadedLocation);
 
       this.loadingHandler(ipcEvent, false);
       const actualExt = file.name.split(".")[1].toLowerCase();
@@ -250,7 +262,7 @@ export class FileInvocationHandler {
           .isFileOpened(paths)
           .catch(() => false);
         this.openFilesMap.set(directories + "/" + file.name, "Opened");
-
+        console.log("isFileOpen", isFileOpen);
         if (!isFileOpen) {
           if (isEditable) {
             await this.saveAndUpload(

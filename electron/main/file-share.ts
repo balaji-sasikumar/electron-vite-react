@@ -59,6 +59,74 @@ export class FileShare {
     return decryptedContent;
   };
 
+  decryptAndSaveFile = async (
+    fromPath: string,
+    toPath: string,
+    key: string
+  ) => {
+    try {
+      return new Promise<void>((resolve, reject) => {
+        const readStream = fs.createReadStream(fromPath, {
+          highWaterMark: chunkSize,
+        });
+        fs.mkdirSync(path.dirname(toPath), { recursive: true });
+        const writeStream = fs.createWriteStream(toPath);
+
+        let leftover = "";
+        let isFirstChunk = true;
+
+        readStream.on("data", (chunk) => {
+          let data = leftover + chunk.toString();
+          let encChunks = data.split(chunkSeparator);
+          leftover = encChunks.pop()!;
+
+          encChunks.forEach((encChunk) => {
+            const decChunk = this.decryptionAES(encChunk, key);
+            if (decChunk === DATA_FORMAT_NOT_SUPPORTED) {
+              reject(DATA_FORMAT_NOT_SUPPORTED);
+            } else {
+              let chunkToWrite = decChunk;
+              if (isFirstChunk) {
+                // Strip off the `data:mimetype;base64,` part
+                const base64Index = decChunk.indexOf(",");
+                if (base64Index !== -1) {
+                  chunkToWrite = decChunk.substring(base64Index + 1);
+                }
+                isFirstChunk = false;
+              }
+              writeStream.write(Buffer.from(chunkToWrite, "base64"));
+            }
+          });
+        });
+
+        readStream.on("end", () => {
+          if (leftover) {
+            const decChunk = this.decryptionAES(leftover, key);
+            if (decChunk === DATA_FORMAT_NOT_SUPPORTED) {
+              reject(DATA_FORMAT_NOT_SUPPORTED);
+            } else {
+              let chunkToWrite = decChunk;
+              if (isFirstChunk) {
+                const base64Index = decChunk.indexOf(",");
+                if (base64Index !== -1) {
+                  chunkToWrite = decChunk.substring(base64Index + 1);
+                }
+              }
+              writeStream.write(Buffer.from(chunkToWrite, "base64"));
+            }
+          }
+          writeStream.end();
+          resolve();
+        });
+
+        readStream.on("error", reject);
+        writeStream.on("error", reject);
+      });
+    } catch (err) {
+      console.error("Error writing file:", err);
+    }
+  };
+
   encryptAndSaveFile = async (
     fromPath: string,
     toPath: string,
@@ -112,10 +180,7 @@ export class FileShare {
     }
   };
 
-  openFile = async (newPath: string, base64Data: any) => {
-    const directoryPath = path.dirname(newPath);
-    fs.mkdirSync(directoryPath, { recursive: true });
-    fs.writeFileSync(newPath, base64Data);
+  openFile = async (newPath: string) => {
     await shell.openPath(newPath).catch((err) => {
       console.error("Error opening file:", err);
     });
@@ -238,7 +303,8 @@ export class FileShare {
   downloadFile = async (
     file: any,
     configuration: Configuration,
-    directoryName: string
+    directoryName: string,
+    localPath: string
   ) => {
     const { accountName: account, accountKey, shareName } = configuration;
     const credential = new StorageSharedKeyCredential(account, accountKey);
@@ -250,18 +316,30 @@ export class FileShare {
     const directoryClient = shareClient.getDirectoryClient(directoryName);
     const fileClient = directoryClient.getFileClient(file.name);
     const downloadResponse = await fileClient.download();
-    const isCompressed = file.name.endsWith(".gz");
-    if (isCompressed) {
-      const decompressedContent = await this.decompressStream(
-        downloadResponse.readableStreamBody!
-      );
-      return decompressedContent.toString();
-    }
+    const readStream = downloadResponse.readableStreamBody!;
 
-    const downloadedContent = await this.streamToBuffer(
-      downloadResponse.readableStreamBody
+    const directoryPath = path.dirname(localPath);
+    const outputFilePath = path.join(
+      directoryPath,
+      file.name.replace(".gz", "")
     );
-    return (downloadedContent as Buffer).toString();
+    fs.mkdirSync(directoryPath, { recursive: true });
+
+    const writeStream = fs.createWriteStream(outputFilePath);
+    const isCompressed = file.name.endsWith(".gz");
+
+    return new Promise<void>((resolve, reject) => {
+      if (isCompressed) {
+        const decompressStream = zlib.createGunzip();
+        readStream.pipe(decompressStream).pipe(writeStream);
+      } else {
+        readStream.pipe(writeStream);
+      }
+
+      writeStream.on("finish", resolve);
+      writeStream.on("error", reject);
+      readStream.on("error", reject); // Ensure to handle readStream errors as well
+    });
   };
 
   uploadFile = async (
