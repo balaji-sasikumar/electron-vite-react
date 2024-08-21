@@ -371,24 +371,6 @@ const FileExplorer: React.FC<Props> = ({ files, showSnackBar }) => {
           />
         </div>
         <div className="ml-auto flex justify-end gap-3">
-          <Button
-            variant="outlined"
-            className="new-folder flex items-center justify-center gap-2 cursor-pointer"
-            onClick={() => setCreateDirModalOpen(true)}
-            disabled={!showOptions}
-          >
-            <span className="material-symbols-outlined">create_new_folder</span>
-            Add Folder
-          </Button>
-          <Button
-            variant="contained"
-            className="flex items-center justify-center gap-2 cursor-pointer"
-            onClick={uploadFile}
-            disabled={!showOptions}
-          >
-            <span className="material-symbols-outlined">upload_file</span>
-            Upload File
-          </Button>
           <TextField
             id="outlined-basic"
             label="Search"
@@ -412,7 +394,25 @@ const FileExplorer: React.FC<Props> = ({ files, showSnackBar }) => {
             inputProps={{
               maxLength: 10,
             }}
-          ></TextField>
+          />
+          <Button
+            variant="outlined"
+            className="new-folder flex items-center justify-center gap-2 cursor-pointer"
+            onClick={() => setCreateDirModalOpen(true)}
+            disabled={!showOptions}
+          >
+            <span className="material-symbols-outlined">create_new_folder</span>
+            Add Folder
+          </Button>
+          <Button
+            variant="contained"
+            className="flex items-center justify-center gap-2 cursor-pointer"
+            onClick={uploadFile}
+            disabled={!showOptions}
+          >
+            <span className="material-symbols-outlined">upload_file</span>
+            Upload File
+          </Button>
           <CustomMenu
             menuItems={configureMenuItems}
             menuButtonIcon="more_vert"

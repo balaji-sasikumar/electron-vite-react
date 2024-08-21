@@ -44,21 +44,6 @@ export class FileShare {
     });
   };
 
-  decryptFile = (encryptedData: string, key: string) => {
-    const encryptedChunks = encryptedData.split(chunkSeparator);
-    const decryptedChunks = [];
-
-    for (const encChunk of encryptedChunks) {
-      const decChunk = this.decryptionAES(encChunk, key);
-      if (decChunk === DATA_FORMAT_NOT_SUPPORTED) {
-        return DATA_FORMAT_NOT_SUPPORTED;
-      }
-      decryptedChunks.push(decChunk);
-    }
-    const decryptedContent = decryptedChunks.join("");
-    return decryptedContent;
-  };
-
   decryptAndSaveFile = async (
     fromPath: string,
     toPath: string,
@@ -495,45 +480,6 @@ export class FileShare {
       writeStream.on("error", (err) => {
         reject(err);
       });
-    });
-  }
-
-  private async decompressStream(
-    readableStream: NodeJS.ReadableStream
-  ): Promise<Buffer> {
-    return new Promise((resolve, reject) => {
-      const chunks: Buffer[] = [];
-
-      const gunzip = zlib.createGunzip();
-
-      readableStream.pipe(gunzip);
-
-      gunzip.on("data", (chunk: Buffer) => {
-        chunks.push(chunk);
-      });
-
-      gunzip.on("end", () => {
-        resolve(Buffer.concat(chunks));
-      });
-
-      gunzip.on("error", (error: Error) => {
-        reject(error);
-      });
-    });
-  }
-
-  private async streamToBuffer(
-    readableStream: NodeJS.ReadableStream | undefined
-  ) {
-    return new Promise((resolve, reject) => {
-      const chunks: Uint8Array[] | Buffer[] = [];
-      readableStream?.on("data", (data) => {
-        chunks.push(data instanceof Buffer ? data : Buffer.from(data));
-      });
-      readableStream?.on("end", () => {
-        resolve(Buffer.concat(chunks));
-      });
-      readableStream?.on("error", reject);
     });
   }
 
