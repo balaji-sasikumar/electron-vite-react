@@ -415,6 +415,29 @@ export class FileShare {
     return path.join(directoryPath, tempFolder, directories, fileName);
   };
 
+  checkFileExists = async (
+    fileName: any,
+    configuration: Configuration,
+    directoryName: string
+  ) => {
+    console.log("Checking file exists", fileName);
+    const { accountName: account, accountKey, shareName } = configuration;
+    const credential = new StorageSharedKeyCredential(account, accountKey);
+    const serviceClient = new ShareServiceClient(
+      `https://${account}.file.core.windows.net`,
+      credential
+    );
+    const shareClient = serviceClient.getShareClient(shareName);
+    const directoryClient = shareClient.getDirectoryClient(directoryName);
+    fileName = fileName.endsWith(".gz") ? fileName : `${fileName}.gz`;
+    const fileClient = directoryClient.getFileClient(fileName);
+    const fileExists = await fileClient.exists();
+    if (fileExists) {
+      return true;
+    }
+    return false;
+  };
+
   private encryptionAES(msg: string, key: string) {
     if (msg && key) {
       return AES.encrypt(msg, key).toString();

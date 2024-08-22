@@ -107,11 +107,26 @@ export class FileInvocationHandler {
       );
 
       this.loadingHandler(ipcEvent, true);
+
+      let isAlreadyExists = await this.fileShare.checkFileExists(
+        path.basename(selectedPath) + ".txt.gz",
+        configuration,
+        directories
+      );
+      console.log("isAlreadyExists", isAlreadyExists);
+      if (isAlreadyExists) {
+        throw new Error(
+          `The file ${path.basename(
+            selectedPath
+          )} already exists in the directory`
+        );
+      }
       await this.fileShare.encryptAndSaveFile(
         selectedPath,
         toPath,
         configuration.privateKey
       );
+
       await this.fileShare.uploadFile(
         path.basename(selectedPath) + ".txt.gz",
         toPath,
@@ -131,7 +146,9 @@ export class FileInvocationHandler {
       ipcEvent.sender.send(
         InvokeEvent.FileProcessingMessage,
         Status.Error,
-        error?.details?.message || "An error occurred while uploading the file"
+        error?.details?.message ||
+          error.message ||
+          "An error occurred while uploading the file"
       );
     }
   };
