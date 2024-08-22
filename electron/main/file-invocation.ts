@@ -219,6 +219,14 @@ export class FileInvocationHandler {
 
       modifyFoldersMap(directoryParts, 1);
 
+      let metadata = await this.fileShare.getMetadata(
+        file,
+        configuration,
+        directories
+      );
+      console.log("metadata", metadata);
+      let isNewFormat = Boolean(metadata?.stream) ?? false;
+
       await this.fileShare.downloadFile(
         file,
         configuration,
@@ -232,7 +240,7 @@ export class FileInvocationHandler {
       let key = configuration.privateKey;
 
       await this.fileShare
-        .decryptAndSaveFile(downloadedLocation, viewPath, key)
+        .decryptAndSaveFile(downloadedLocation, viewPath, key, isNewFormat)
         .catch((_error) => {
           throw new Error(
             `The file ${path.basename(viewPath)} is not in the correct format`

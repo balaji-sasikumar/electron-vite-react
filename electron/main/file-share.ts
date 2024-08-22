@@ -47,7 +47,8 @@ export class FileShare {
   decryptAndSaveFile = async (
     fromPath: string,
     toPath: string,
-    key: string
+    key: string,
+    isNewFormat: boolean
   ) => {
     try {
       return new Promise<void>((resolve, reject) => {
@@ -55,31 +56,44 @@ export class FileShare {
           highWaterMark: chunkSize,
         });
         fs.mkdirSync(path.dirname(toPath), { recursive: true });
-        const writeStream = fs.createWriteStream(toPath);
+
+        const writeStream = fs.createWriteStream(
+          isNewFormat ? toPath : `${toPath}.tmp`
+        );
 
         let leftover = "";
         let isFirstChunk = true;
+        let tempFilePath = `${toPath}.tmp`;
 
         readStream.on("data", (chunk) => {
-          let data = leftover + chunk.toString();
+          let data = leftover + chunk.toString(); // Ensure proper chunk handling
           let encChunks = data.split(chunkSeparator);
-          leftover = encChunks.pop()!;
+          leftover = encChunks.pop()!; // Store leftover chunk part for next iteration
 
           encChunks.forEach((encChunk) => {
             const decChunk = this.decryptionAES(encChunk, key);
             if (decChunk === DATA_FORMAT_NOT_SUPPORTED) {
               reject(DATA_FORMAT_NOT_SUPPORTED);
-            } else {
-              let chunkToWrite = decChunk;
-              if (isFirstChunk) {
-                // Strip off the `data:mimetype;base64,` part
-                const base64Index = decChunk.indexOf(",");
-                if (base64Index !== -1) {
-                  chunkToWrite = decChunk.substring(base64Index + 1);
-                }
-                isFirstChunk = false;
+              return;
+            }
+
+            let chunkToWrite = decChunk;
+
+            // For the first chunk, remove the 'data:mimetype;base64,' part
+            if (isFirstChunk) {
+              const base64Index = decChunk.indexOf(",");
+              if (base64Index !== -1) {
+                chunkToWrite = decChunk.substring(base64Index + 1);
               }
+              isFirstChunk = false;
+            }
+
+            if (isNewFormat) {
+              // Write base64-decoded chunk directly to the file
               writeStream.write(Buffer.from(chunkToWrite, "base64"));
+            } else {
+              // For old format, write decrypted data directly to the temporary file
+              writeStream.write(chunkToWrite, "utf-8");
             }
           });
         });
@@ -89,19 +103,33 @@ export class FileShare {
             const decChunk = this.decryptionAES(leftover, key);
             if (decChunk === DATA_FORMAT_NOT_SUPPORTED) {
               reject(DATA_FORMAT_NOT_SUPPORTED);
-            } else {
-              let chunkToWrite = decChunk;
-              if (isFirstChunk) {
-                const base64Index = decChunk.indexOf(",");
-                if (base64Index !== -1) {
-                  chunkToWrite = decChunk.substring(base64Index + 1);
-                }
+              return;
+            }
+            let chunkToWrite = decChunk;
+            if (isFirstChunk) {
+              const base64Index = decChunk.indexOf(",");
+              if (base64Index !== -1) {
+                chunkToWrite = decChunk.substring(base64Index + 1);
               }
+            }
+
+            if (isNewFormat) {
               writeStream.write(Buffer.from(chunkToWrite, "base64"));
+            } else {
+              writeStream.write(chunkToWrite, "utf-8");
             }
           }
-          writeStream.end();
-          resolve();
+
+          writeStream.end(() => {
+            if (!isNewFormat) {
+              const content = fs.readFileSync(tempFilePath, {
+                encoding: "utf-8",
+              });
+              fs.writeFileSync(toPath, content, { encoding: "base64" });
+              fs.unlinkSync(tempFilePath);
+            }
+            resolve();
+          });
         });
 
         readStream.on("error", reject);
@@ -327,6 +355,24 @@ export class FileShare {
     });
   };
 
+  getMetadata = async (
+    file: any,
+    configuration: Configuration,
+    directoryName: string
+  ) => {
+    const { accountName: account, accountKey, shareName } = configuration;
+    const credential = new StorageSharedKeyCredential(account, accountKey);
+    const serviceClient = new ShareServiceClient(
+      `https://${account}.file.core.windows.net`,
+      credential
+    );
+    const shareClient = serviceClient.getShareClient(shareName);
+    const directoryClient = shareClient.getDirectoryClient(directoryName);
+    const fileClient = directoryClient.getFileClient(file.name);
+    const properties = await fileClient.getProperties();
+    return properties.metadata;
+  };
+
   uploadFile = async (
     fileName: any,
     filePath: string,
@@ -345,7 +391,11 @@ export class FileShare {
     const fileClient = directoryClient.getFileClient(fileName);
     const compressedFilePath = `${filePath}.gz`;
     await this.compressFile(filePath, compressedFilePath);
-    await fileClient.uploadFile(compressedFilePath);
+    await fileClient.uploadFile(compressedFilePath, {
+      metadata: {
+        stream: "true",
+      },
+    });
     this.removeFileFromTempPath(compressedFilePath);
   };
 
