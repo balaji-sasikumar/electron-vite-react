@@ -5,6 +5,7 @@ import TextField from "@mui/material/TextField";
 import Modal from "@mui/material/Modal";
 import "./settings.css";
 import { IconButton, InputAdornment } from "@mui/material";
+import { InvokeEvent } from "@/enums/invoke-event.enum";
 
 const style = {
   position: "absolute" as "absolute",
@@ -71,6 +72,7 @@ const SettingsComponent: React.FC<SettingsComponentProps> = ({
     localStorage.setItem("configuration", JSON.stringify(storageData));
     localStorage.setItem("directories", "");
     localStorage.setItem("connectionString", connectionString);
+    window.ipcRenderer.invoke(InvokeEvent.SendTempPath, tempPath);
     onClose && onClose();
     refresh();
   };

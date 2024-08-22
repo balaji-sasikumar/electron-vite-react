@@ -61,7 +61,10 @@ function App() {
 
     window.addEventListener("offline", handleOffline);
     window.addEventListener("online", handleOnline);
-
+    let tempPath = JSON.parse(
+      localStorage.getItem("configuration") || "{}"
+    ).tempPath;
+    window.ipcRenderer.invoke(InvokeEvent.SendTempPath, tempPath);
     const fetchData = async () => {
       if (!navigator.onLine) {
         handleOffline();
@@ -117,6 +120,7 @@ function App() {
       window.ipcRenderer.off(InvokeEvent.GetFileResponse, () => {});
       window.ipcRenderer.off(InvokeEvent.Loading, () => {});
       window.ipcRenderer.off("app-state-changed", () => {});
+      window.ipcRenderer.off(InvokeEvent.SendTempPath, () => {});
       window.removeEventListener("offline", handleOffline);
       window.removeEventListener("online", handleOnline);
     };

@@ -12,6 +12,8 @@ import { fileURLToPath } from "node:url";
 import { fileInvocation } from "./file-invocation";
 import { exec } from "child_process";
 import { logError } from "./logger";
+import * as fs from "fs";
+import * as path from "path";
 
 globalThis.__filename = fileURLToPath(import.meta.url);
 globalThis.__dirname = dirname(__filename);
@@ -43,6 +45,7 @@ let win: BrowserWindow | null = null;
 const preload = join(__dirname, "../preload/index.mjs");
 const url = process.env.VITE_DEV_SERVER_URL;
 const indexHtml = join(process.env.DIST, "index.html");
+let tempPath = "";
 
 nativeTheme.themeSource = "light";
 async function createWindow() {
@@ -75,20 +78,35 @@ async function createWindow() {
     if (url.startsWith("https:")) shell.openExternal(url);
     return { action: "deny" };
   });
-
+  ipcMain.handle("send-temp-path", (_, arg) => {
+    console.log(`Received temp path: ${arg}`);
+    tempPath = arg;
+  });
   win.on("close", (e) => {
-    if (process.platform === "win32") {
+    console.log(`Temp path: ${tempPath}`);
+    const tempDirectoryIsEmpty = tempPath ? isDirectoryEmpty(tempPath) : true;
+    if (!tempDirectoryIsEmpty) {
       e.preventDefault();
       dialog.showMessageBox({
         type: "info",
-        title: "Cleanup in Progress",
-        message: "Clearing recent files data. Please wait...",
+        title: "Files Exist",
+        message:
+          "There are files present in tempPath. Please Save them before closing the application.",
       });
-      executeBatchScript();
-      setTimeout(() => {
-        win?.destroy();
-        app.quit();
-      }, 3000);
+    } else {
+      if (process.platform === "win32") {
+        e.preventDefault();
+        dialog.showMessageBox({
+          type: "info",
+          title: "Cleanup in Progress",
+          message: "Clearing recent files data. Please wait...",
+        });
+        executeBatchScript();
+        setTimeout(() => {
+          win?.destroy();
+          app.quit();
+        }, 3000);
+      }
     }
   });
   win.on("blur", () => {
@@ -157,6 +175,30 @@ function executeBatchScript() {
   });
 }
 
+function isDirectoryEmpty(directory: any) {
+  const files = fs.readdirSync(directory);
+
+  // Filter out any .DS_Store files
+  const filteredFiles = files.filter((file) => file !== ".DS_Store");
+
+  // Recursively check for files in the directory or its subdirectories
+  for (const file of filteredFiles) {
+    const fullPath = path.join(directory, file);
+    const stat = fs.lstatSync(fullPath);
+
+    if (stat.isDirectory()) {
+      // Recursively check subdirectories
+      if (!isDirectoryEmpty(fullPath)) {
+        return false; // Found non-empty subdirectory, stop recursion
+      }
+    } else {
+      return false; // Found a file, stop recursion
+    }
+  }
+
+  // If no files were found, the directory is empty
+  return true;
+}
 process.on("uncaughtException", (error) => {
   console.error("Uncaught Exception:", error);
   logError(`Uncaught Exception -- ${JSON.stringify(error)}`);

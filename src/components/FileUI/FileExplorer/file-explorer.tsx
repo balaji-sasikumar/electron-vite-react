@@ -88,6 +88,7 @@ const FileExplorer: React.FC<Props> = ({ files, showSnackBar }) => {
       label: "Clear",
       onClick: () => {
         localStorage.clear();
+        window.ipcRenderer.invoke(InvokeEvent.SendTempPath, null);
         refresh();
       },
     },

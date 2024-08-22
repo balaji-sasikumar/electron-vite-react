@@ -13,4 +13,5 @@ export enum InvokeEvent {
   GetDirectoryTreeResponse = "get-directory-tree-response",
   RenameFolder = "rename-folder",
   RenameFile = "rename-file",
+  SendTempPath = "send-temp-path",
 }
