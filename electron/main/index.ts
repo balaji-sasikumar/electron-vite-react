@@ -80,10 +80,10 @@ async function createWindow() {
   });
   ipcMain.handle("send-temp-path", (_, arg) => {
     console.log(`Received temp path: ${arg}`);
-    tempPath = arg;
+    tempPath = path.join(arg, "windows-temp");
   });
   win.on("close", (e) => {
-    console.log(`Temp path: ${tempPath}`);
+    console.log(`Temp path -> On close: ${tempPath}`);
     const tempDirectoryIsEmpty = tempPath ? isDirectoryEmpty(tempPath) : true;
     if (!tempDirectoryIsEmpty) {
       e.preventDefault();
@@ -176,28 +176,32 @@ function executeBatchScript() {
 }
 
 function isDirectoryEmpty(directory: any) {
-  const files = fs.readdirSync(directory);
+  try {
+    const files = fs.readdirSync(directory);
 
-  // Filter out any .DS_Store files
-  const filteredFiles = files.filter((file) => file !== ".DS_Store");
+    // Filter out any .DS_Store files
+    const filteredFiles = files.filter((file) => file !== ".DS_Store");
 
-  // Recursively check for files in the directory or its subdirectories
-  for (const file of filteredFiles) {
-    const fullPath = path.join(directory, file);
-    const stat = fs.lstatSync(fullPath);
+    // Recursively check for files in the directory or its subdirectories
+    for (const file of filteredFiles) {
+      const fullPath = path.join(directory, file);
+      const stat = fs.lstatSync(fullPath);
 
-    if (stat.isDirectory()) {
-      // Recursively check subdirectories
-      if (!isDirectoryEmpty(fullPath)) {
-        return false; // Found non-empty subdirectory, stop recursion
+      if (stat.isDirectory()) {
+        // Recursively check subdirectories
+        if (!isDirectoryEmpty(fullPath)) {
+          return false; // Found non-empty subdirectory, stop recursion
+        }
+      } else {
+        return false; // Found a file, stop recursion
       }
-    } else {
-      return false; // Found a file, stop recursion
     }
-  }
 
-  // If no files were found, the directory is empty
-  return true;
+    // If no files were found, the directory is empty
+    return true;
+  } catch (error) {
+    return true;
+  }
 }
 process.on("uncaughtException", (error) => {
   console.error("Uncaught Exception:", error);
