@@ -87,9 +87,10 @@ async function createWindow() {
     console.log(`Temp path -> On close: ${tempPath}`);
     const tempDirectoryIsEmpty = tempPath ? isDirectoryEmpty(tempPath) : true;
     if (!tempDirectoryIsEmpty) {
+      e.preventDefault();
       if (!isDialogOpen) {
         isDialogOpen = true;
-        e.preventDefault();
+        win?.setEnabled(false);
         dialog
           .showMessageBox({
             type: "info",
@@ -99,6 +100,8 @@ async function createWindow() {
           })
           .finally(() => {
             isDialogOpen = false;
+            win?.setEnabled(true);
+            win?.focus();
           });
       }
     } else {
