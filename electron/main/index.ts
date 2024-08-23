@@ -87,18 +87,20 @@ async function createWindow() {
     console.log(`Temp path -> On close: ${tempPath}`);
     const tempDirectoryIsEmpty = tempPath ? isDirectoryEmpty(tempPath) : true;
     if (!tempDirectoryIsEmpty) {
-      isDialogOpen = true;
-      e.preventDefault();
-      dialog
-        .showMessageBox({
-          type: "info",
-          title: "Files Exist",
-          message:
-            "There are files present in tempPath. Please Save them before closing the application.",
-        })
-        .finally(() => {
-          isDialogOpen = false;
-        });
+      if (!isDialogOpen) {
+        isDialogOpen = true;
+        e.preventDefault();
+        dialog
+          .showMessageBox({
+            type: "info",
+            title: "Files Exist",
+            message:
+              "There are files present in tempPath. Please Save them before closing the application.",
+          })
+          .finally(() => {
+            isDialogOpen = false;
+          });
+      }
     } else {
       if (process.platform === "win32") {
         e.preventDefault();
