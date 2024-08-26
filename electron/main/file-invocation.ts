@@ -264,7 +264,14 @@ export class FileInvocationHandler {
 
         if (!isFileOpen) {
           clearInterval(intervalId);
-          if (isEditable) {
+          if (isEditable || !isNewFormat) {
+            !isNewFormat &&
+              ipcEvent.sender.send(
+                InvokeEvent.FileProcessingMessage,
+                Status.Info,
+                "The file is not in the new format. We are converting it to the new format.",
+                true
+              );
             await this.saveAndUpload(
               ipcEvent,
               file,

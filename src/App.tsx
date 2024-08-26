@@ -32,15 +32,21 @@ function App() {
   const [snackBarOpen, setSnackBarOpen] = useState<boolean>(false);
   const [loading, setLoading] = useState<boolean>(false);
   const [showPassCode, setShowPassCode] = useState<boolean>(true);
+  const [snackBarHold, setSnackBarHold] = useState<boolean>(false);
   const sendOnlineStatus = () => {
     window.electron.sendOnlineStatus();
   };
 
-  const showSnackBar = (severity: any, message: string) => {
+  const showSnackBar = (
+    severity: any,
+    message: string,
+    hold: boolean = false
+  ) => {
     if (showPassCode && severity != "error") return;
     setSeverity(severity);
     setMessage(message);
     setSnackBarOpen(true);
+    setSnackBarHold(hold);
   };
 
   let timeoutValue: NodeJS.Timeout;
@@ -91,8 +97,8 @@ function App() {
 
       window.ipcRenderer.on(
         InvokeEvent.FileProcessingMessage,
-        (event, title, message) => {
-          showSnackBar(title as any, message);
+        (event, title, message, hold?) => {
+          showSnackBar(title as any, message, hold);
         }
       );
       window.ipcRenderer.on(InvokeEvent.Loading, (event, loading) => {
@@ -139,7 +145,7 @@ function App() {
           open={snackBarOpen}
           onClose={() => setSnackBarOpen(false)}
           TransitionComponent={SlideTransition}
-          autoHideDuration={5000}
+          autoHideDuration={snackBarHold ? null : 5000}
         >
           <Alert
             onClose={() => setSnackBarOpen(false)}
