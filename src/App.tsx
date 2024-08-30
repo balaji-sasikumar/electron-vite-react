@@ -1,25 +1,21 @@
-import { useEffect, useState } from "react";
+import { lazy, useEffect, useState } from "react";
 import "./App.css";
-import FileExplorer from "./components/FileUI/FileExplorer/file-explorer";
 import { ThemeProvider, createTheme } from "@mui/material/styles";
 import CssBaseline from "@mui/material/CssBaseline";
 import { InvokeEvent } from "./enums/invoke-event.enum";
 import Snackbar from "@mui/material/Snackbar";
-import PassCodeComponent from "./components/FileUI/PassCode/pass-code";
 import { Alert, Box, CircularProgress, Slide, SlideProps } from "@mui/material";
+const FileExplorer = lazy(
+  () => import("./components/FileUI/FileExplorer/file-explorer")
+);
+import PassCodeComponent from "./components/FileUI/PassCode/pass-code";
+import { File } from "../electron/interfaces/file.interface";
+
 const lightTheme = createTheme({
   palette: {
     mode: "light",
   },
 });
-interface File {
-  kind: string;
-  name: string;
-  properties: {
-    contentLength: number;
-  };
-  fileId: string;
-}
 function SlideTransition(props: SlideProps) {
   return <Slide {...props} direction="up" />;
 }
