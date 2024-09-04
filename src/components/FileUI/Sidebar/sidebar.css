@@ -3,38 +3,12 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  font-size: 14px !important;
 }
 
 .MuiTreeItem-content {
   padding: 4px 12px !important;
 }
-
-.custom-tree li {
-  position: relative;
-  padding-left: 20px; /* Adjust the padding as needed to make space for the line */
-}
-
-.custom-tree li::before {
-  content: "";
-  position: absolute;
-  top: 0;
-  bottom: 0;
-  left: 0;
-  width: 1px;
-  background-color: #ddd; /* Adjust the color as needed */
-}
-
-.custom-tree li > .MuiTreeItem-content {
-  position: relative;
-  padding-left: 20px; /* Match this padding with the li padding */
-}
-
-.custom-tree li > .MuiTreeItem-content::before {
-  content: "";
-  position: absolute;
-  top: 50%;
-  left: -20px; /* Adjust to match the li padding */
-  width: 20px; /* Adjust to match the li padding */
-  height: 1px;
-  background-color: #ddd; /* Adjust the color as needed */
+.Mui-selected {
+  background-color: #cce0ed !important;
 }

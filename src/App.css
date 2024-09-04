@@ -14,3 +14,29 @@
   width: 0 !important;
   display: none;
 }
+
+.MuiTableContainer-root {
+  box-shadow: none !important;
+}
+
+.MuiTable-root {
+  border-collapse: separate;
+  border-spacing: 0 0.5em !important;
+  border: transparent;
+}
+.MuiTable-root tr {
+  box-shadow: 1px 1px 3px 0 #00000022;
+  transition: background-color 0.3s;
+  border-radius: 0.25em;
+}
+.MuiTable-root tr:hover {
+  background-color: #f5f5f5;
+}
+.MuiTable-root td,
+.MuiTable-root th {
+  border: 0 !important;
+}
+
+.MuiTableCell-root {
+  padding: 0.5em 1em !important;
+}

@@ -42,7 +42,10 @@ function BreadcrumbsComponent({
                 refresh();
               }}
               key={index}
-              className="cursor-pointer"
+              className={
+                "cursor-pointer" +
+                (index === breadcrumbs.length - 1 ? " !font-bold" : "")
+              }
             >
               {dir}
             </Link>

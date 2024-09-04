@@ -15,6 +15,7 @@ interface Props {
 const Sidebar: React.FC<Props> = ({ files, openFile, width }) => {
   const [directoryTree, setDirectoryTree] = useState<TreeViewBaseItem[]>([]);
   const [expandedItems, setExpandedItems] = useState<string[]>([]);
+  const [selectedItem, setSelectedItem] = useState<string | null>(null);
 
   const findExpandedItems = (items: any[]): string[] => {
     let expanded: string[] = [];
@@ -25,8 +26,28 @@ const Sidebar: React.FC<Props> = ({ files, openFile, width }) => {
         expanded = [...expanded, ...findExpandedItems(item.children)];
       }
     }
-
     return expanded;
+  };
+
+  const findLastSelectedItem = (items: any[]): string => {
+    let directories = localStorage.getItem("directories") || "";
+    const dirs = directories.split("/");
+    let currentDir = dirs[dirs.length - 1];
+    let selected: string = "";
+    for (const item of items) {
+      if (item.label === currentDir) {
+        selected = item.id;
+        break;
+      }
+
+      if (item.children.length > 0) {
+        selected = findLastSelectedItem(item.children);
+        if (selected !== "") {
+          break;
+        }
+      }
+    }
+    return selected;
   };
 
   const getSelectedDirectory = (id: string, items: any[]): any => {
@@ -70,13 +91,26 @@ const Sidebar: React.FC<Props> = ({ files, openFile, width }) => {
   }, [files]);
 
   useEffect(() => {
+    setSelectedItem(findLastSelectedItem(directoryTree));
     setExpandedItems(findExpandedItems(directoryTree));
   }, [directoryTree]);
 
   const folderIcon = () => (
-    <span className="material-symbols-outlined material-symbols-fill text-yellow-400 max-w-6 max-h-6">
-      folder_open
-    </span>
+    <div className="flex items-center justify-center mr-8">
+      <span className="material-symbols-outlined">keyboard_arrow_right</span>
+      <span className="material-symbols-outlined material-symbols-fill text-[#3795F2]">
+        folder
+      </span>
+    </div>
+  );
+
+  const folderOpenIcon = () => (
+    <div className="flex items-center justify-center mr-8">
+      <span className="material-symbols-outlined">keyboard_arrow_down</span>
+      <span className="material-symbols-outlined material-symbols-fill text-[#3795F2]">
+        folder_open
+      </span>
+    </div>
   );
   const CustomTreeItem = React.forwardRef(
     (props: TreeItem2Props, ref: React.Ref<HTMLLIElement>) => (
@@ -95,15 +129,14 @@ const Sidebar: React.FC<Props> = ({ files, openFile, width }) => {
   return (
     <Box
       sx={{ height: "calc(100vh - 7rem)", width: width }}
-      className="py-4 overflow-y-scroll shadow-md scrollbar-hide custom-tree"
+      className="py-4 overflow-y-scroll shadow-md scrollbar-hide custom-tree bg-[#E8F6FF] px-4 pl-[1.5rem]"
     >
       <RichTreeView
         items={directoryTree}
         expandedItems={expandedItems}
         slots={{
-          expandIcon: folderIcon,
           endIcon: folderIcon,
-          collapseIcon: folderIcon,
+          collapseIcon: folderOpenIcon,
           item: CustomTreeItem,
         }}
         className="py-2 "
@@ -127,6 +160,8 @@ const Sidebar: React.FC<Props> = ({ files, openFile, width }) => {
             });
           }
         }}
+        selectedItems={selectedItem}
+        itemChildrenIndentation={24}
       />
     </Box>
   );

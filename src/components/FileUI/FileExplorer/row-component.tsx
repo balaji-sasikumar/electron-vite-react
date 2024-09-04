@@ -17,10 +17,7 @@ function formatDate(date: string): string {
 }
 function RowComponent(row: any, fileOptionMenuItems: any, openFile: any) {
   return (
-    <TableRow
-      key={row.name}
-      sx={{ "&:last-child td, &:last-child th": { border: 0 } }}
-    >
+    <TableRow key={row.name}>
       <TableCell
         component="th"
         scope="row"
@@ -28,10 +25,11 @@ function RowComponent(row: any, fileOptionMenuItems: any, openFile: any) {
           openFile(row);
         }}
         className="cursor-pointer"
+        align="center"
       >
         <div className="flex items-center gap-4">
           {row.kind === "directory" ? (
-            <span className="material-symbols-outlined material-symbols-fill text-yellow-400 max-w-6 max-h-6">
+            <span className="material-symbols-outlined material-symbols-fill text-[#3795F2] max-w-6 max-h-6">
               folder_open
             </span>
           ) : (
@@ -44,14 +42,14 @@ function RowComponent(row: any, fileOptionMenuItems: any, openFile: any) {
           {row.kind === "file" ? row.name.split(".txt")?.[0] : row.name}
         </div>
       </TableCell>
-      <TableCell>
+      <TableCell align="center">
         {row.kind.charAt(0).toUpperCase() + row.kind.slice(1)}
       </TableCell>
-      <TableCell>
+      <TableCell align="center">
         {row.kind === "file" &&
           convertContentLength(row.properties.contentLength)}
       </TableCell>
-      <TableCell>
+      <TableCell align="center">
         {formatDate(row.properties.lastModified || row.properties.createdOn)}
       </TableCell>
       <TableCell className="cursor-pointer">
@@ -61,6 +59,7 @@ function RowComponent(row: any, fileOptionMenuItems: any, openFile: any) {
             params: [row],
           }))}
           menuButtonIcon="more_horiz"
+          showMenu={false}
         />
       </TableCell>
     </TableRow>

@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from "react";
 import Table from "@mui/material/Table";
 import TableBody from "@mui/material/TableBody";
-import TableCell from "@mui/material/TableCell";
+import TableCell, { tableCellClasses } from "@mui/material/TableCell";
 import TableContainer from "@mui/material/TableContainer";
 import TableHead from "@mui/material/TableHead";
 import TableRow from "@mui/material/TableRow";
@@ -10,7 +10,7 @@ import Button from "@mui/material/Button";
 import "./file-explorer.css";
 import { InvokeEvent } from "@/enums/invoke-event.enum";
 import AlertDialog from "../Dialog/dialog";
-import { IconButton, InputAdornment, TextField } from "@mui/material";
+import { IconButton, InputAdornment, styled, TextField } from "@mui/material";
 import SettingsComponent from "../Settings/settings";
 import SideBar from "../Sidebar/sidebar";
 import { File } from "../../../../electron/interfaces/file.interface";
@@ -24,6 +24,13 @@ interface Props {
   files: File[];
   showSnackBar: (severity: any, message: string) => void;
 }
+
+const StyledTableCell = styled(TableCell)(({}) => ({
+  [`&.${tableCellClasses.head}`]: {
+    backgroundColor: "#F4F4F4",
+    fontWeight: "bold",
+  },
+}));
 
 const FileExplorer: React.FC<Props> = ({ files, showSnackBar }) => {
   const [currentDirectory, setCurrentDirectory] = useState<string>(
@@ -82,7 +89,22 @@ const FileExplorer: React.FC<Props> = ({ files, showSnackBar }) => {
     setWidth(Math.max(250, Math.min(400, newWidth)));
   };
 
+  const uploadFile = async () => {
+    const configuration = getConfigurations();
+    let directories = localStorage.getItem("directories") || "";
+    await window.ipcRenderer.invoke(
+      InvokeEvent.UploadFromPC,
+      configuration,
+      directories
+    );
+  };
+
   const configureMenuItems = [
+    {
+      icon: "upload_file",
+      label: "Upload",
+      onClick: uploadFile,
+    },
     {
       icon: "mop",
       label: "Clear",
@@ -103,7 +125,7 @@ const FileExplorer: React.FC<Props> = ({ files, showSnackBar }) => {
 
   const fileOptionMenuItems = [
     {
-      icon: "folder_managed",
+      icon: "edit",
       label: "Rename",
       onClick: (file: any) => {
         setSelectedRow(file);
@@ -273,16 +295,6 @@ const FileExplorer: React.FC<Props> = ({ files, showSnackBar }) => {
     }
   };
 
-  const uploadFile = async () => {
-    const configuration = getConfigurations();
-    let directories = localStorage.getItem("directories") || "";
-    await window.ipcRenderer.invoke(
-      InvokeEvent.UploadFromPC,
-      configuration,
-      directories
-    );
-  };
-
   const getConfigurations = () => localStorage.getItem("configuration");
 
   return (
@@ -374,7 +386,7 @@ const FileExplorer: React.FC<Props> = ({ files, showSnackBar }) => {
         <div className="ml-auto flex justify-end gap-3">
           <TextField
             id="outlined-basic"
-            label="Search"
+            label=""
             variant="outlined"
             disabled={!showOptions}
             size="small"
@@ -386,38 +398,33 @@ const FileExplorer: React.FC<Props> = ({ files, showSnackBar }) => {
               );
             }}
             InputProps={{
-              startAdornment: (
-                <InputAdornment position="start">
-                  <span className="material-symbols-outlined">search</span>
+              endAdornment: (
+                <InputAdornment position="end">
+                  <span className="material-symbols-outlined text-black">
+                    search
+                  </span>
                 </InputAdornment>
               ),
             }}
             inputProps={{
               maxLength: 10,
             }}
+            className="w-[20em]"
           />
           <Button
-            variant="outlined"
-            className="new-folder flex items-center justify-center gap-2 cursor-pointer"
+            variant="contained"
+            className="flex items-center justify-center gap-2 cursor-pointer"
             onClick={() => setCreateDirModalOpen(true)}
             disabled={!showOptions}
           >
             <span className="material-symbols-outlined">create_new_folder</span>
             Add Folder
           </Button>
-          <Button
-            variant="contained"
-            className="flex items-center justify-center gap-2 cursor-pointer"
-            onClick={uploadFile}
-            disabled={!showOptions}
-          >
-            <span className="material-symbols-outlined">upload_file</span>
-            Upload File
-          </Button>
           <CustomMenu
             menuItems={configureMenuItems}
             menuButtonIcon="more_vert"
             disabled={!showOptions}
+            showMenu={false}
           />
         </div>
       </div>
@@ -438,14 +445,16 @@ const FileExplorer: React.FC<Props> = ({ files, showSnackBar }) => {
               sx={{ maxHeight: "calc(100vh - 7rem)" }}
               className="scrollbar-hide"
             >
-              <Table stickyHeader aria-label="sticky table">
+              <Table stickyHeader aria-label="sticky table" className="p-4">
                 <TableHead className="sticky top-0 z-50">
                   <TableRow>
-                    <TableCell>Name</TableCell>
-                    <TableCell>Type</TableCell>
-                    <TableCell>Size</TableCell>
-                    <TableCell>Last Modified</TableCell>
-                    <TableCell></TableCell>
+                    <StyledTableCell>Name</StyledTableCell>
+                    <StyledTableCell align="center">Type</StyledTableCell>
+                    <StyledTableCell align="center">Size</StyledTableCell>
+                    <StyledTableCell align="center">
+                      Last Modified
+                    </StyledTableCell>
+                    <StyledTableCell align="center">Actions</StyledTableCell>
                   </TableRow>
                 </TableHead>
                 <TableBody>
