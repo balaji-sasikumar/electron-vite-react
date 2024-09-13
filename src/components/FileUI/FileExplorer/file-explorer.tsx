@@ -101,14 +101,6 @@ const FileExplorer: React.FC<Props> = ({ files, showSnackBar }) => {
 
   const configureMenuItems = [
     {
-      icon: "create_new_folder",
-      label: "Add Folder",
-      onClick: () => {
-        setCreateDirModalOpen(true);
-      },
-    },
-
-    {
       icon: "settings",
       label: "Configure",
       onClick: () => {
@@ -371,7 +363,7 @@ const FileExplorer: React.FC<Props> = ({ files, showSnackBar }) => {
         <div className="flex items-center justify-center">
           {currentDirectory && (
             <IconButton
-              className="material-symbols-outlined  cursor-pointer"
+              className="material-symbols-outlined  cursor-pointer "
               onClick={() => {
                 goBack();
               }}
@@ -423,11 +415,25 @@ const FileExplorer: React.FC<Props> = ({ files, showSnackBar }) => {
             <span className="material-symbols-outlined">upload_file</span>
             Upload File
           </Button>
+          <IconButton
+            onClick={() => {
+              setCreateDirModalOpen(true);
+            }}
+            className="flex-1"
+            disabled={!showOptions}
+            aria-label="more"
+            id="long-button"
+            title="Add Folder"
+          >
+            <span className="material-symbols-outlined text-black">
+              create_new_folder
+            </span>
+          </IconButton>
           <CustomMenu
             menuItems={configureMenuItems}
             menuButtonIcon="more_vert"
             disabled={!showOptions}
-            showMenu={false}
+            showMenu={true}
           />
         </div>
       </div>

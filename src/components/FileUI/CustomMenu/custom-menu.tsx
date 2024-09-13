@@ -46,7 +46,9 @@ const CustomMenu: React.FC<Props> = ({
             aria-expanded={open ? "true" : undefined}
             aria-haspopup="true"
           >
-            <span className="material-symbols-outlined">{menuButtonIcon}</span>
+            <span className="material-symbols-outlined text-black">
+              {menuButtonIcon}
+            </span>
           </IconButton>
           <Menu
             id="long-menu"
