@@ -129,7 +129,7 @@ const Sidebar: React.FC<Props> = ({ files, openFile, width }) => {
   return (
     <Box
       sx={{ height: "calc(100vh - 7rem)", width: width }}
-      className="py-4 overflow-y-scroll shadow-md scrollbar-hide custom-tree bg-[#E8F6FF] px-4 pl-[1.5rem]"
+      className="py-4 overflow-y-scroll shadow-md scrollbar-thin custom-tree bg-[#E8F6FF] px-4 pl-[1.5rem]"
     >
       <RichTreeView
         items={directoryTree}

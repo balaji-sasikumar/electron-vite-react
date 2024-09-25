@@ -81,7 +81,7 @@ async function createWindow() {
   });
   ipcMain.handle("send-temp-path", (_, arg) => {
     console.log(`Received temp path: ${arg}`);
-    tempPath = path.join(arg, "windows-temp");
+    if (arg) tempPath = path.join(arg, "windows-temp");
   });
   win.on("close", (e) => {
     console.log(`Temp path -> On close: ${tempPath}`);

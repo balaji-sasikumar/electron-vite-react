@@ -452,7 +452,7 @@ const FileExplorer: React.FC<Props> = ({ files, showSnackBar }) => {
             <TableContainer
               component={Paper}
               sx={{ maxHeight: "calc(100vh - 7rem)" }}
-              className="scrollbar-hide"
+              className="scrollbar-thin"
             >
               <Table stickyHeader aria-label="sticky table" className="p-4">
                 <TableHead className="sticky top-0 z-50">

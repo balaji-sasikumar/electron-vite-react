@@ -11,6 +11,11 @@
 }
 
 .scrollbar-hide::-webkit-scrollbar {
+  width: 5px !important;
+  display: none;
+}
+
+.scrollbar-thin {
   scrollbar-width: thin;
 }
 
