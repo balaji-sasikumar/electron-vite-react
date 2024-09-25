@@ -11,8 +11,7 @@
 }
 
 .scrollbar-hide::-webkit-scrollbar {
-  width: 0 !important;
-  display: none;
+  scrollbar-width: thin;
 }
 
 .MuiTableContainer-root {

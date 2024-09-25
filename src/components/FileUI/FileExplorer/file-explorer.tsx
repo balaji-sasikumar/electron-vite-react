@@ -441,7 +441,7 @@ const FileExplorer: React.FC<Props> = ({ files, showSnackBar }) => {
         <SideBar files={files} openFile={openFile} width={width} />
         <span
           role="presentation"
-          className="w-[11px] m-0 border-l-[5px] cursor-ew-resize resizer"
+          className="w-[11px] m-0 border-l-[1px] cursor-ew-resize"
           ref={resizerRef}
           onMouseDown={handleMouseDown}
         ></span>

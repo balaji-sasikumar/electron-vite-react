@@ -14,10 +14,6 @@
   align-items: center;
 }
 
-.resizer:hover {
-  border-left: 5px solid rgba(0, 0, 0, 0.5);
-}
-
 .MuiBreadcrumbs-ol {
   font-size: 14px;
 }
