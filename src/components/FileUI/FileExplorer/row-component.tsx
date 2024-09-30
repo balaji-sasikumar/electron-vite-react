@@ -15,6 +15,13 @@ function convertContentLength(contentLength: number): string {
 function formatDate(date: string): string {
   return dayjs(date).format("DD/MM/YY hh:mm:ss A");
 }
+let timeout: any;
+
+const debounce = (func: any, wait: any) => {
+  clearTimeout(timeout);
+  timeout = setTimeout(func, wait);
+};
+
 function RowComponent(row: any, fileOptionMenuItems: any, openFile: any) {
   return (
     <TableRow key={row.name}>
@@ -22,7 +29,7 @@ function RowComponent(row: any, fileOptionMenuItems: any, openFile: any) {
         component="th"
         scope="row"
         onClick={() => {
-          openFile(row);
+          debounce(() => openFile(row), 500);
         }}
         className="cursor-pointer"
         align="center"

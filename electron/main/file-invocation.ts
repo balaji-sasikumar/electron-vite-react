@@ -210,9 +210,13 @@ export class FileInvocationHandler {
       );
 
       if (this.openFilesMap.has(directories + "/" + file.name)) {
-        throw new Error(
+        ipcEvent.sender.send(
+          InvokeEvent.FileProcessingMessage,
+          Status.Error,
           `The file ${path.basename(viewPath)} is already opened`
         );
+        this.loadingHandler(ipcEvent, false);
+        return;
       }
 
       this.openFilesMap.set(directories + "/" + file.name, "Opening");
@@ -246,6 +250,7 @@ export class FileInvocationHandler {
             `The file ${path.basename(viewPath)} is not in the correct format`
           );
         });
+      console.log("viewPath", viewPath);
       await this.fileShare.openFile(viewPath);
 
       // Clean up the downloaded file

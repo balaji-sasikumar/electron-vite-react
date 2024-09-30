@@ -217,11 +217,11 @@ function isDirectoryEmpty(directory: any) {
 process.on("uncaughtException", (error) => {
   console.error("Uncaught Exception:", error);
   logError(`Uncaught Exception -- ${JSON.stringify(error)}`);
-  app.quit();
+  app.exit(1);
 });
 
 process.on("unhandledRejection", (error) => {
   console.error("Unhandled Rejection:", error);
   logError(`Unhandled Exception -- ${JSON.stringify(error)}`);
-  app.quit();
+  app.exit(1);
 });

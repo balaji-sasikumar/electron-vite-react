@@ -342,12 +342,27 @@ export class FileShare {
     const isCompressed = file.name.endsWith(".gz");
 
     return new Promise<void>((resolve, reject) => {
-      if (isCompressed) {
-        const decompressStream = zlib.createGunzip();
-        readStream.pipe(decompressStream).pipe(writeStream);
-      } else {
-        readStream.pipe(writeStream);
-      }
+      // Buffer the first few bytes to check for gzip magic number (1F 8B)
+      const magicNumberBuffer = Buffer.alloc(2);
+      readStream.once("data", (chunk) => {
+        magicNumberBuffer[0] = chunk[0];
+        magicNumberBuffer[1] = chunk[1];
+
+        // Reset the stream by unshifting the first chunk back
+        readStream.unshift(chunk);
+
+        const isGzip =
+          magicNumberBuffer[0] === 0x1f && magicNumberBuffer[1] === 0x8b;
+
+        if (isCompressed && isGzip) {
+          const decompressStream = zlib.createGunzip();
+          readStream.pipe(decompressStream).pipe(writeStream);
+        } else if (!isCompressed) {
+          readStream.pipe(writeStream);
+        } else {
+          reject(new Error("File is not a valid gzip file."));
+        }
+      });
 
       writeStream.on("finish", resolve);
       writeStream.on("error", reject);
