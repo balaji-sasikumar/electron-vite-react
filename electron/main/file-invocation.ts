@@ -230,17 +230,18 @@ export class FileInvocationHandler {
       );
       console.log("metadata", metadata);
       let isNewFormat = Boolean(metadata?.stream) ?? false;
-
+      console.log("viewpath before download", viewPath);
+      downloadedLocation = path.join(
+        path.dirname(viewPath),
+        file.name.replace(".gz", "")
+      );
       await this.fileShare.downloadFile(
         file,
         configuration,
         directories,
         viewPath
       );
-      downloadedLocation = path.join(
-        path.dirname(viewPath),
-        file.name.replace(".gz", "")
-      );
+
       let key = configuration.privateKey;
 
       await this.fileShare
