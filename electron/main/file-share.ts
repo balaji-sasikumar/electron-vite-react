@@ -126,7 +126,7 @@ export class FileShare {
                 encoding: "utf-8",
               });
               fs.writeFileSync(toPath, content, { encoding: "base64" });
-              fs.unlinkSync(tempFilePath);
+              this.removeFileFromTempPath(tempFilePath);
             }
             resolve();
           });
@@ -464,12 +464,7 @@ export class FileShare {
   };
 
   removeFileFromTempPath = (filePath: string) => {
-    fs.unlink(filePath, (err) => {
-      if (err) {
-        console.error("Error removing file:", err);
-      }
-      console.log("File removed successfully");
-    });
+    fs.unlinkSync(filePath);
   };
 
   getSharedStoragePath = (
