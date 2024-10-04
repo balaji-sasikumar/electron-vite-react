@@ -52,6 +52,12 @@ export class FileInvocationHandler {
         directoryName
       );
       ipcEvent.sender.send(InvokeEvent.TryFetch, "");
+      ipcEvent.sender.send(InvokeEvent.CreatedState, directoryName);
+      ipcEvent.sender.send(
+        InvokeEvent.FileProcessingMessage,
+        Status.Success,
+        `The directory ${directoryName} is created successfully`
+      );
     } catch (error: any) {
       ipcEvent.sender.send(
         InvokeEvent.FileProcessingMessage,
@@ -113,7 +119,6 @@ export class FileInvocationHandler {
         configuration,
         directories
       );
-      console.log("isAlreadyExists", isAlreadyExists);
       if (isAlreadyExists) {
         throw new Error(
           `The file ${path.basename(
@@ -126,9 +131,9 @@ export class FileInvocationHandler {
         toPath,
         configuration.privateKey
       );
-
+      let uploadFilePath = path.basename(selectedPath) + ".txt.gz";
       await this.fileShare.uploadFile(
-        path.basename(selectedPath) + ".txt.gz",
+        uploadFilePath,
         toPath,
         configuration,
         directories
@@ -136,6 +141,7 @@ export class FileInvocationHandler {
       this.fileShare.removeFileFromTempPath(toPath);
       this.loadingHandler(ipcEvent, false);
       ipcEvent.sender.send(InvokeEvent.TryFetch, "");
+      ipcEvent.sender.send(InvokeEvent.CreatedState, uploadFilePath);
       ipcEvent.sender.send(
         InvokeEvent.FileProcessingMessage,
         Status.Success,

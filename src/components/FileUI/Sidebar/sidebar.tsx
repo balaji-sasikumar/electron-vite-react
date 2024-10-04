@@ -97,7 +97,7 @@ const Sidebar: React.FC<Props> = ({ files, openFile, width }) => {
 
   const folderIcon = () => (
     <div className="flex items-center justify-center mr-8">
-      <span className="material-symbols-outlined">keyboard_arrow_right</span>
+      <span className="material-symbols-outlined ">keyboard_arrow_right</span>
       <span className="material-symbols-outlined material-symbols-fill text-[#3795F2]">
         folder
       </span>
@@ -106,7 +106,9 @@ const Sidebar: React.FC<Props> = ({ files, openFile, width }) => {
 
   const folderOpenIcon = () => (
     <div className="flex items-center justify-center mr-8">
-      <span className="material-symbols-outlined">keyboard_arrow_down</span>
+      <span className="material-symbols-outlined open">
+        keyboard_arrow_down
+      </span>
       <span className="material-symbols-outlined material-symbols-fill text-[#3795F2]">
         folder_open
       </span>
@@ -128,8 +130,8 @@ const Sidebar: React.FC<Props> = ({ files, openFile, width }) => {
   );
   return (
     <Box
-      sx={{ height: "calc(100vh - 7rem)", width: width }}
-      className="py-4 overflow-y-scroll shadow-md scrollbar-thin custom-tree bg-[#E8F6FF] px-4 pl-[1.5rem]"
+      sx={{ width: width }}
+      className="py-4 overflow-y-scroll shadow-md scrollbar-thin custom-tree bg-[#dff1ff] px-4 pl-[1.5rem] sidebar-height"
     >
       <RichTreeView
         items={directoryTree}

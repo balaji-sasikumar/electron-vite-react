@@ -14,4 +14,5 @@ export enum InvokeEvent {
   RenameFolder = "rename-folder",
   RenameFile = "rename-file",
   SendTempPath = "send-temp-path",
+  CreatedState = "created-state",
 }

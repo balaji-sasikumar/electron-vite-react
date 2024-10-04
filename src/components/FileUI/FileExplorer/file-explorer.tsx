@@ -47,6 +47,7 @@ const FileExplorer: React.FC<Props> = ({ files, showSnackBar }) => {
 
   const [renameModalOpen, setRenameModalOpen] = React.useState(false);
   const [selectedRow, setSelectedRow] = React.useState<File>({} as File);
+  const [recentUpload, setRecentUpload] = React.useState<string>("");
 
   const [settingsModalOpen, setSettingsModalOpen] = React.useState(false);
   const [showOptions, setShowOptions] = useState<boolean>(navigator.onLine);
@@ -140,6 +141,7 @@ const FileExplorer: React.FC<Props> = ({ files, showSnackBar }) => {
   ];
 
   useEffect(() => {
+    setRecentUpload("");
     setShowOptions(navigator.onLine);
     if (localStorage.getItem("showConfig") === "false") setShowOptions(false);
 
@@ -149,8 +151,12 @@ const FileExplorer: React.FC<Props> = ({ files, showSnackBar }) => {
     window.ipcRenderer.on(InvokeEvent.TryFetch, async () => {
       refresh();
     });
+    window.ipcRenderer.on(InvokeEvent.CreatedState, (event, fileName) => {
+      setRecentUpload(fileName);
+    });
     return () => {
       window.ipcRenderer.off(InvokeEvent.TryFetch, () => {});
+      window.ipcRenderer.off(InvokeEvent.CreatedState, () => {});
     };
   }, [files]);
 
@@ -290,6 +296,82 @@ const FileExplorer: React.FC<Props> = ({ files, showSnackBar }) => {
     }
   };
 
+  const TopBar = () => (
+    <div className="flex my-3 sticky top-0 px-2 py-4 bg-white z-10 shadow-md">
+      <div className="flex items-center justify-center">
+        {currentDirectory && (
+          <IconButton
+            className="material-symbols-outlined  cursor-pointer "
+            onClick={() => {
+              goBack();
+            }}
+            disabled={!showOptions}
+          >
+            chevron_left
+          </IconButton>
+        )}
+      </div>
+      <div className="ml-auto flex justify-end gap-3">
+        <TextField
+          id="outlined-basic"
+          label=""
+          variant="outlined"
+          disabled={!showOptions}
+          size="small"
+          onChange={async (e) => {
+            await getFiles(
+              getConfigurations(),
+              localStorage.getItem("directories") || "",
+              e.target.value
+            );
+          }}
+          InputProps={{
+            endAdornment: (
+              <InputAdornment position="end">
+                <span className="material-symbols-outlined text-black">
+                  search
+                </span>
+              </InputAdornment>
+            ),
+          }}
+          inputProps={{
+            maxLength: 10,
+          }}
+          className="w-[20em]"
+        />
+        <Button
+          variant="contained"
+          className="flex items-center justify-center gap-2 cursor-pointer"
+          onClick={uploadFile}
+          disabled={!showOptions}
+        >
+          <span className="material-symbols-outlined">upload_file</span>
+          Upload File
+        </Button>
+        <IconButton
+          onClick={() => {
+            setCreateDirModalOpen(true);
+          }}
+          className="flex-1"
+          disabled={!showOptions}
+          aria-label="more"
+          id="long-button"
+          title="Add Folder"
+        >
+          <span className="material-symbols-outlined text-black">
+            create_new_folder
+          </span>
+        </IconButton>
+        <CustomMenu
+          menuItems={configureMenuItems}
+          menuButtonIcon="more_vert"
+          disabled={!showOptions}
+          showMenu={true}
+        />
+      </div>
+    </div>
+  );
+
   const getConfigurations = () => localStorage.getItem("configuration");
 
   return (
@@ -358,85 +440,7 @@ const FileExplorer: React.FC<Props> = ({ files, showSnackBar }) => {
           selectedRow.kind === "directory" ? "Folder" : "File"
         } Name`}
       />
-
-      <div className="flex my-3 sticky top-0 px-2 py-4 bg-white z-10 shadow-md">
-        <div className="flex items-center justify-center">
-          {currentDirectory && (
-            <IconButton
-              className="material-symbols-outlined  cursor-pointer "
-              onClick={() => {
-                goBack();
-              }}
-              disabled={!showOptions}
-            >
-              chevron_left
-            </IconButton>
-          )}
-          <BreadcrumbsComponent
-            breadcrumbs={breadcrumbs}
-            refresh={refresh}
-            setCurrentDirectory={setCurrentDirectory}
-          />
-        </div>
-        <div className="ml-auto flex justify-end gap-3">
-          <TextField
-            id="outlined-basic"
-            label=""
-            variant="outlined"
-            disabled={!showOptions}
-            size="small"
-            onChange={async (e) => {
-              await getFiles(
-                getConfigurations(),
-                localStorage.getItem("directories") || "",
-                e.target.value
-              );
-            }}
-            InputProps={{
-              endAdornment: (
-                <InputAdornment position="end">
-                  <span className="material-symbols-outlined text-black">
-                    search
-                  </span>
-                </InputAdornment>
-              ),
-            }}
-            inputProps={{
-              maxLength: 10,
-            }}
-            className="w-[20em]"
-          />
-          <Button
-            variant="contained"
-            className="flex items-center justify-center gap-2 cursor-pointer"
-            onClick={uploadFile}
-            disabled={!showOptions}
-          >
-            <span className="material-symbols-outlined">upload_file</span>
-            Upload File
-          </Button>
-          <IconButton
-            onClick={() => {
-              setCreateDirModalOpen(true);
-            }}
-            className="flex-1"
-            disabled={!showOptions}
-            aria-label="more"
-            id="long-button"
-            title="Add Folder"
-          >
-            <span className="material-symbols-outlined text-black">
-              create_new_folder
-            </span>
-          </IconButton>
-          <CustomMenu
-            menuItems={configureMenuItems}
-            menuButtonIcon="more_vert"
-            disabled={!showOptions}
-            showMenu={true}
-          />
-        </div>
-      </div>
+      {TopBar()}
       <div className="flex flex-row">
         <SideBar files={files} openFile={openFile} width={width} />
         <span
@@ -446,15 +450,22 @@ const FileExplorer: React.FC<Props> = ({ files, showSnackBar }) => {
           onMouseDown={handleMouseDown}
         ></span>
         <div className="grow pl-3">
+          <div className="sticky top-0">
+            <BreadcrumbsComponent
+              breadcrumbs={breadcrumbs}
+              refresh={refresh}
+              setCurrentDirectory={setCurrentDirectory}
+            />
+          </div>
           {files.length == 0 ? (
             NoContentsComponent()
           ) : (
             <TableContainer
               component={Paper}
-              sx={{ maxHeight: "calc(100vh - 7rem)" }}
+              sx={{ maxHeight: "calc(100vh - 11rem)" }}
               className="scrollbar-thin"
             >
-              <Table stickyHeader aria-label="sticky table" className="p-4">
+              <Table stickyHeader aria-label="sticky table" className="">
                 <TableHead className="sticky top-0 z-50">
                   <TableRow>
                     <StyledTableCell>Name</StyledTableCell>
@@ -467,9 +478,10 @@ const FileExplorer: React.FC<Props> = ({ files, showSnackBar }) => {
                   </TableRow>
                 </TableHead>
                 <TableBody>
-                  {files.map((row: any) =>
-                    RowComponent(row, fileOptionMenuItems, openFile)
-                  )}
+                  {files.map((row: any) => {
+                    if (row.name === recentUpload) row.selected = true;
+                    return RowComponent(row, fileOptionMenuItems, openFile);
+                  })}
                 </TableBody>
               </Table>
             </TableContainer>

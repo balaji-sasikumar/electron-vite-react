@@ -24,7 +24,15 @@ const debounce = (func: any, wait: any) => {
 
 function RowComponent(row: any, fileOptionMenuItems: any, openFile: any) {
   return (
-    <TableRow key={row.name}>
+    <TableRow
+      key={row.fileId}
+      className={row.selected && "selected"}
+      ref={(el) => {
+        if (el && row.selected) {
+          el.scrollIntoView({ behavior: "smooth", block: "center" });
+        }
+      }}
+    >
       <TableCell
         component="th"
         scope="row"

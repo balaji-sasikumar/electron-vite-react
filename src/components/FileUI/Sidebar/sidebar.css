@@ -10,5 +10,22 @@
   padding: 4px 12px !important;
 }
 .Mui-selected {
-  background-color: #cce0ed !important;
+  background-color: #3795f2 !important;
+}
+.Mui-selected .material-symbols-outlined {
+  z-index: 1;
+}
+
+.sidebar-height {
+  height: calc(100vh - 7rem);
+}
+.MuiTreeItem-content.Mui-selected:before {
+  content: "";
+  width: 125%;
+  background: #b3daff;
+  position: absolute;
+  left: -2em;
+  height: 2em;
+  z-index: 0;
+  border-radius: 0.25em;
 }
