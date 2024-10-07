@@ -30,12 +30,10 @@ const Sidebar: React.FC<Props> = ({ files, openFile, width }) => {
   };
 
   const findLastSelectedItem = (items: any[]): string => {
-    let directories = localStorage.getItem("directories") || "";
-    const dirs = directories.split("/");
-    let currentDir = dirs[dirs.length - 1];
+    let currentDir = localStorage.getItem("currentDirectory");
     let selected: string = "";
     for (const item of items) {
-      if (item.label === currentDir) {
+      if (item.id === currentDir) {
         selected = item.id;
         break;
       }
