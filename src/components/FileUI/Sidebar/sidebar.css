@@ -8,9 +8,7 @@
 
 .MuiTreeItem-content {
   padding: 4px 12px !important;
-}
-.Mui-selected {
-  background-color: #3795f2 !important;
+  position: unset !important;
 }
 .Mui-selected .material-symbols-outlined {
   z-index: 1;
@@ -24,7 +22,7 @@
   width: 125%;
   background: #b3daff;
   position: absolute;
-  left: -2em;
+  left: -24px;
   height: 2em;
   z-index: 0;
   border-radius: 0.25em;
