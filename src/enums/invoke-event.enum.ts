@@ -15,4 +15,5 @@ export enum InvokeEvent {
   RenameFile = "rename-file",
   SendTempPath = "send-temp-path",
   CreatedState = "created-state",
+  SetCurrentDirectory = "set-current-directory",
 }

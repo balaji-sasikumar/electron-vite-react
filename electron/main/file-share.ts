@@ -213,6 +213,8 @@ export class FileShare {
     const shareClient = serviceClient
       .getShareClient(shareName)
       .getDirectoryClient(directoryName);
+    let directoryProperties = await shareClient.getProperties();
+
     let iter = shareClient.listFilesAndDirectories({
       includeTimestamps: true,
       prefix: prefix,
@@ -221,7 +223,7 @@ export class FileShare {
     for await (const item of iter) {
       fileList.push(item);
     }
-    return fileList;
+    return [fileList, directoryProperties.fileId];
   };
 
   getDirectoryTree = async (

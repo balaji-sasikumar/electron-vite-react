@@ -6,6 +6,7 @@ import { InvokeEvent } from "../../src/enums/invoke-event.enum";
 import { FileShare } from "./file-share";
 import { Status } from "../../src/enums/status.enum";
 import { Configuration } from "electron/interfaces/configuration.interface";
+import { File } from "electron/interfaces/file.interface";
 let onlineStatus: boolean;
 
 export class FileInvocationHandler {
@@ -170,11 +171,12 @@ export class FileInvocationHandler {
         ipcEvent.sender.send(InvokeEvent.GetFileResponse, []);
         return;
       }
-      const res = await this.fileShare.listFiles(
+      const [res, currentDirectory] = await this.fileShare.listFiles(
         configuration,
         folderName,
         prefix
       );
+      ipcEvent.sender.send(InvokeEvent.SetCurrentDirectory, currentDirectory);
       ipcEvent.sender.send(InvokeEvent.GetFileResponse, res);
     } catch (error: any) {
       ipcEvent.sender.send(
@@ -186,7 +188,7 @@ export class FileInvocationHandler {
   };
   openFileInvocation = async (
     ipcEvent: Electron.IpcMainInvokeEvent,
-    file: { name: string },
+    file: File,
     configuration: any,
     directories: string
   ) => {

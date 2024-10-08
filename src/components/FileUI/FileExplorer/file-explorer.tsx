@@ -241,7 +241,6 @@ const FileExplorer: React.FC<Props> = ({ files, showSnackBar }) => {
       directories += file.name;
       setCurrentDirectory(file.name);
       localStorage.setItem("directories", directories);
-      localStorage.setItem("currentDirectory", file.fileId);
       refresh();
       return;
     }

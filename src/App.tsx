@@ -104,6 +104,12 @@ function App() {
       window.ipcRenderer.on(InvokeEvent.GetFileResponse, (event, file) => {
         setFiles(file);
       });
+      window.ipcRenderer.on(
+        InvokeEvent.SetCurrentDirectory,
+        (event, currentDirectoryId) => {
+          localStorage.setItem("currentDirectory", currentDirectoryId);
+        }
+      );
     };
 
     fetchData();
@@ -121,6 +127,7 @@ function App() {
       window.ipcRenderer.off(InvokeEvent.FileProcessingMessage, () => {});
       window.ipcRenderer.off(InvokeEvent.GetFileResponse, () => {});
       window.ipcRenderer.off(InvokeEvent.Loading, () => {});
+      window.ipcRenderer.off(InvokeEvent.SetCurrentDirectory, () => {});
       window.ipcRenderer.off("app-state-changed", () => {});
       window.ipcRenderer.off(InvokeEvent.SendTempPath, () => {});
       window.removeEventListener("offline", handleOffline);
