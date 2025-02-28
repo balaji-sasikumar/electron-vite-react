@@ -159,7 +159,7 @@ function App() {
             {message}
           </Alert>
         </Snackbar>
-        {showPassCode ? (
+        {false ? (
           <PassCodeComponent
             setShowPassCode={setShowPassCode}
             showSnackBar={showSnackBar}

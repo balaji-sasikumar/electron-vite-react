@@ -19,7 +19,10 @@ import {
 import * as zlib from "zlib";
 import { Configuration } from "electron/interfaces/configuration.interface";
 import { DirectoryItem } from "electron/interfaces/directoryItem.interface";
+import { config } from "../config";
+
 export class FileShare {
+  withEncryption = config.withEncryption;
   private constructor() {}
   isFileOpened = async (paths: string[]): Promise<boolean> => {
     return new Promise((resolve, reject) => {
@@ -334,13 +337,9 @@ export class FileShare {
     const readStream = downloadResponse.readableStreamBody!;
 
     const directoryPath = path.dirname(localPath);
-    const outputFilePath = path.join(
-      directoryPath,
-      file.name.replace(".gz", "")
-    );
     fs.mkdirSync(directoryPath, { recursive: true });
 
-    const writeStream = fs.createWriteStream(outputFilePath);
+    const writeStream = fs.createWriteStream(localPath);
     const isCompressed = file.name.endsWith(".gz");
 
     return new Promise<void>((resolve, reject) => {
@@ -356,10 +355,10 @@ export class FileShare {
         const isGzip =
           magicNumberBuffer[0] === 0x1f && magicNumberBuffer[1] === 0x8b;
 
-        if (isCompressed && isGzip) {
+        if (isCompressed && isGzip && this.withEncryption) {
           const decompressStream = zlib.createGunzip();
           readStream.pipe(decompressStream).pipe(writeStream);
-        } else if (!isCompressed) {
+        } else if (!isCompressed || !this.withEncryption) {
           readStream.pipe(writeStream);
         } else {
           reject(new Error("File is not a valid gzip file."));
@@ -391,11 +390,12 @@ export class FileShare {
   };
 
   uploadFile = async (
-    fileName: any,
+    fileName: string,
     filePath: string,
     configuration: Configuration,
     directoryName: string
   ) => {
+    let compress = this.withEncryption;
     const { accountName: account, accountKey, shareName } = configuration;
     const credential = new StorageSharedKeyCredential(account, accountKey);
     const serviceClient = new ShareServiceClient(
@@ -404,16 +404,26 @@ export class FileShare {
     );
     const shareClient = serviceClient.getShareClient(shareName);
     const directoryClient = shareClient.getDirectoryClient(directoryName);
-    fileName = fileName.endsWith(".gz") ? fileName : `${fileName}.gz`;
+
+    let uploadFilePath = filePath;
+
+    if (compress) {
+      const compressedFilePath = `${filePath}.gz`;
+      await this.compressFile(filePath, compressedFilePath);
+      uploadFilePath = compressedFilePath;
+      fileName = fileName.endsWith(".gz") ? fileName : `${fileName}.gz`;
+    }
+
     const fileClient = directoryClient.getFileClient(fileName);
-    const compressedFilePath = `${filePath}.gz`;
-    await this.compressFile(filePath, compressedFilePath);
-    await fileClient.uploadFile(compressedFilePath, {
+    await fileClient.uploadFile(uploadFilePath, {
       metadata: {
         stream: "true",
       },
     });
-    this.removeFileFromTempPath(compressedFilePath);
+
+    if (compress) {
+      this.removeFileFromTempPath(uploadFilePath);
+    }
   };
 
   deleteFile = async (
@@ -491,7 +501,6 @@ export class FileShare {
     );
     const shareClient = serviceClient.getShareClient(shareName);
     const directoryClient = shareClient.getDirectoryClient(directoryName);
-    fileName = fileName.endsWith(".gz") ? fileName : `${fileName}.gz`;
     const fileClient = directoryClient.getFileClient(fileName);
     const fileExists = await fileClient.exists();
     if (fileExists) {

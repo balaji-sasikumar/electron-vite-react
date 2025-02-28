@@ -7,12 +7,16 @@ import { FileShare } from "./file-share";
 import { Status } from "../../src/enums/status.enum";
 import { Configuration } from "electron/interfaces/configuration.interface";
 import { File } from "electron/interfaces/file.interface";
-let onlineStatus: boolean;
+import { config } from "../config";
+import { createRequire } from "node:module";
+const chokidar = createRequire(import.meta.url)("chokidar");
 
+let onlineStatus: boolean;
 export class FileInvocationHandler {
   fileShare = FileShare.getInstance();
   openFilesMap = new Map<string, string>();
   openFoldersMap = new Map<string, number>();
+  withEncryption = config.withEncryption;
   private constructor() {}
 
   deleteFileHandler = async (
@@ -105,18 +109,14 @@ export class FileInvocationHandler {
         return "canceled";
       }
       configuration = JSON.parse(configuration);
-
       let selectedPath = filePaths.filePaths[0];
-      let toPath = this.fileShare.getSharedStoragePath(
-        configuration.tempPath,
-        directories,
-        path.basename(selectedPath) + ".txt"
-      );
 
       this.loadingHandler(ipcEvent, true);
 
       let isAlreadyExists = await this.fileShare.checkFileExists(
-        path.basename(selectedPath) + ".txt.gz",
+        this.withEncryption
+          ? path.basename(selectedPath) + ".txt.gz"
+          : path.basename(selectedPath),
         configuration,
         directories
       );
@@ -127,22 +127,46 @@ export class FileInvocationHandler {
           )} already exists in the directory`
         );
       }
-      await this.fileShare.encryptAndSaveFile(
-        selectedPath,
-        toPath,
-        configuration.privateKey
-      );
-      let uploadFilePath = path.basename(selectedPath) + ".txt.gz";
-      await this.fileShare.uploadFile(
-        uploadFilePath,
-        toPath,
-        configuration,
-        directories
-      );
-      this.fileShare.removeFileFromTempPath(toPath);
+
+      if (this.withEncryption) {
+        let toPath = this.fileShare.getSharedStoragePath(
+          configuration.tempPath,
+          directories,
+          path.basename(selectedPath) + ".txt"
+        );
+
+        await this.fileShare.encryptAndSaveFile(
+          selectedPath,
+          toPath,
+          configuration.privateKey
+        );
+
+        let uploadFilePath = path.basename(selectedPath) + ".txt.gz";
+        await this.fileShare.uploadFile(
+          uploadFilePath,
+          toPath,
+          configuration,
+          directories
+        );
+        this.fileShare.removeFileFromTempPath(toPath);
+
+        ipcEvent.sender.send(InvokeEvent.CreatedState, uploadFilePath);
+      } else {
+        await this.fileShare.uploadFile(
+          path.basename(selectedPath),
+          selectedPath,
+          configuration,
+          directories
+        );
+
+        ipcEvent.sender.send(
+          InvokeEvent.CreatedState,
+          path.basename(selectedPath)
+        );
+      }
+
       this.loadingHandler(ipcEvent, false);
       ipcEvent.sender.send(InvokeEvent.TryFetch, "");
-      ipcEvent.sender.send(InvokeEvent.CreatedState, uploadFilePath);
       ipcEvent.sender.send(
         InvokeEvent.FileProcessingMessage,
         Status.Success,
@@ -186,6 +210,7 @@ export class FileInvocationHandler {
       );
     }
   };
+
   openFileInvocation = async (
     ipcEvent: Electron.IpcMainInvokeEvent,
     file: File,
@@ -194,7 +219,9 @@ export class FileInvocationHandler {
   ) => {
     let downloadedLocation: string = "",
       viewPath: string = "",
-      directoryParts = directories.split("/");
+      directoryParts = directories.split("/"),
+      isUploading = false;
+
     const modifyFoldersMap = (directoryParts: string[], value: number) => {
       for (let i = 0; i < directoryParts.length; i++) {
         let currentPath = directoryParts.slice(0, i + 1).join("/");
@@ -204,17 +231,23 @@ export class FileInvocationHandler {
         );
       }
     };
+
     try {
       this.loadingHandler(ipcEvent, true);
       configuration = JSON.parse(configuration);
-      if (!file.name.endsWith(".txt") && !file.name.endsWith(".gz")) {
+
+      if (
+        !file.name.endsWith(".txt") &&
+        !this.withEncryption &&
+        file.name.endsWith(".gz")
+      ) {
         throw new Error(`The file ${file.name} is not supported for opening`);
       }
 
       viewPath = this.fileShare.getSharedStoragePath(
         configuration.tempPath,
         directories,
-        file.name.split(".txt")[0]
+        this.withEncryption ? file.name.split(".txt")[0] : file.name
       );
 
       if (this.openFilesMap.has(directories + "/" + file.name)) {
@@ -228,7 +261,6 @@ export class FileInvocationHandler {
       }
 
       this.openFilesMap.set(directories + "/" + file.name, "Opening");
-
       modifyFoldersMap(directoryParts, 1);
 
       let metadata = await this.fileShare.getMetadata(
@@ -236,13 +268,12 @@ export class FileInvocationHandler {
         configuration,
         directories
       );
-      console.log("metadata", metadata);
       let isNewFormat = Boolean(metadata?.stream) ?? false;
-      console.log("viewpath before download", viewPath);
       downloadedLocation = path.join(
         path.dirname(viewPath),
         file.name.replace(".gz", "")
       );
+
       await this.fileShare.downloadFile(
         file,
         configuration,
@@ -250,42 +281,49 @@ export class FileInvocationHandler {
         viewPath
       );
 
-      let key = configuration.privateKey;
+      if (this.withEncryption) {
+        let key = configuration.privateKey;
+        await this.fileShare
+          .decryptAndSaveFile(downloadedLocation, viewPath, key, isNewFormat)
+          .catch((_error) => {
+            throw new Error(
+              `The file ${path.basename(viewPath)} is not in the correct format`
+            );
+          });
+        this.fileShare.removeFileFromTempPath(downloadedLocation);
+      }
 
-      await this.fileShare
-        .decryptAndSaveFile(downloadedLocation, viewPath, key, isNewFormat)
-        .catch((_error) => {
-          throw new Error(
-            `The file ${path.basename(viewPath)} is not in the correct format`
-          );
-        });
-      console.log("viewPath", viewPath);
       await this.fileShare.openFile(viewPath);
-
-      // Clean up the downloaded file
-      this.fileShare.removeFileFromTempPath(downloadedLocation);
-
       this.loadingHandler(ipcEvent, false);
       const actualExt = file.name.split(".")[1].toLowerCase();
       let isEditable = editableExtensions.includes(actualExt);
       let paths = [viewPath];
 
-      // Monitor the file to check if it's still open
-      const intervalId = setInterval(async () => {
-        let isFileOpen = await this.fileShare
-          .isFileOpened(paths)
-          .catch(() => false);
+      /** ------------------------- Watch for File Changes & Sync ------------------------ */
 
-        if (!isFileOpen) {
-          clearInterval(intervalId);
+      const watcher = chokidar
+        .watch(viewPath, {
+          persistent: true,
+          ignoreInitial: true,
+          awaitWriteFinish: {
+            stabilityThreshold: 2000,
+            pollInterval: 100,
+          },
+        })
+        .on("change", async () => {
+          console.log(`File ${viewPath} changed. Uploading...`);
           if (isEditable || !isNewFormat) {
-            !isNewFormat &&
+            if (!isNewFormat) {
               ipcEvent.sender.send(
                 InvokeEvent.FileProcessingMessage,
                 Status.Info,
                 "The file is not in the new format. We are converting it to the new format.",
                 true
               );
+            }
+
+            // Set upload state
+            isUploading = true;
             await this.saveAndUpload(
               ipcEvent,
               file,
@@ -293,7 +331,29 @@ export class FileInvocationHandler {
               configuration,
               directories
             );
+            isUploading = false;
           }
+        });
+
+      /** ------------------------- Monitor File Closing & Cleanup ------------------------ */
+
+      const intervalId = setInterval(async () => {
+        let isFileOpen = await this.fileShare
+          .isFileOpened(paths)
+          .catch(() => false);
+
+        if (!isFileOpen) {
+          if (isUploading) {
+            console.log(
+              `File ${viewPath} closed, but upload is in progress. Waiting...`
+            );
+            return; // Skip cleanup if still uploading
+          }
+
+          clearInterval(intervalId);
+          watcher.close();
+          console.log(`File ${viewPath} closed. Cleaning up...`);
+
           this.fileShare.removeFileFromTempPath(viewPath);
           ipcEvent.sender.send(InvokeEvent.TryFetch, "");
           this.loadingHandler(ipcEvent, false);
@@ -406,25 +466,34 @@ export class FileInvocationHandler {
   ) => {
     try {
       this.loadingHandler(ipcEvent, true);
+
       if (!onlineStatus) {
         this.loadingHandler(ipcEvent, false);
         throw new Error(`File ${file.name} cannot be saved in offline mode`);
       }
-      // filePath is the path of the file that is being opened
-      const encryptedPath = filePath + ".txt";
 
-      await this.fileShare.encryptAndSaveFile(
-        filePath,
-        encryptedPath,
-        configuration.privateKey as string
-      );
+      let uploadPath = filePath;
+
+      if (this.withEncryption) {
+        uploadPath = filePath + ".txt";
+        await this.fileShare.encryptAndSaveFile(
+          filePath,
+          uploadPath,
+          configuration.privateKey as string
+        );
+      }
+
       await this.fileShare.uploadFile(
         file.name,
-        encryptedPath,
+        uploadPath,
         configuration,
         directories
       );
-      this.fileShare.removeFileFromTempPath(encryptedPath);
+
+      if (this.withEncryption) {
+        this.fileShare.removeFileFromTempPath(uploadPath);
+      }
+
       this.loadingHandler(ipcEvent, false);
     } catch (error: any) {
       ipcEvent.sender.send(
