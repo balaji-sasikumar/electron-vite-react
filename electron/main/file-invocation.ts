@@ -20,170 +20,143 @@ export class FileInvocationHandler {
   withEncryption = config.withEncryption;
   private constructor() {}
 
-  // deleteFileHandler = async (
-  //   ipcEvent: Electron.IpcMainInvokeEvent,
-  //   configuration: any,
-  //   folderName: string,
-  //   fileName: string
-  // ) => {
-  //   try {
-  //     if (this.openFilesMap.has(folderName + "/" + fileName)) {
-  //       throw new Error("Please close the file before deleting");
-  //     }
+  deleteFileHandler = async (
+    ipcEvent: Electron.IpcMainInvokeEvent,
+    configuration: any,
+    folderName: string,
+    fileName: string
+  ) => {
+    try {
+      if (this.openFilesMap.has(folderName + "/" + fileName)) {
+        throw new Error("Please close the file before deleting");
+      }
 
-  //     configuration = JSON.parse(configuration);
-  //     await this.fileShare.deleteFile(configuration, folderName, fileName);
-  //     ipcEvent.sender.send(InvokeEvent.TryFetch, "");
-  //   } catch (error: any) {
-  //     ipcEvent.sender.send(
-  //       InvokeEvent.FileProcessingMessage,
-  //       Status.Error,
-  //       error?.details?.message ||
-  //         error.message ||
-  //         "An error occurred while deleting the file"
-  //     );
-  //   }
-  // };
-  // createDirectoryHandler = async (
-  //   ipcEvent: Electron.IpcMainInvokeEvent,
-  //   configuration: any,
-  //   currentDirectoryPath: string,
-  //   directoryName: string
-  // ) => {
-  //   try {
-  //     configuration = JSON.parse(configuration);
-  //     await this.fileShare.addDirectory(
-  //       configuration,
-  //       currentDirectoryPath,
-  //       directoryName
-  //     );
-  //     ipcEvent.sender.send(InvokeEvent.TryFetch, "");
-  //     ipcEvent.sender.send(InvokeEvent.CreatedState, directoryName);
-  //     ipcEvent.sender.send(
-  //       InvokeEvent.FileProcessingMessage,
-  //       Status.Success,
-  //       `The directory ${directoryName} is created successfully`
-  //     );
-  //   } catch (error: any) {
-  //     ipcEvent.sender.send(
-  //       InvokeEvent.FileProcessingMessage,
-  //       Status.Error,
-  //       error?.details?.message ||
-  //         "An error occurred while creating the directory"
-  //     );
-  //   }
-  // };
-  // deleteDirectoryHandler = async (
-  //   ipcEvent: Electron.IpcMainInvokeEvent,
-  //   configuration: any,
-  //   directoryPath: string
-  // ) => {
-  //   try {
-  //     configuration = JSON.parse(configuration);
-  //     await this.fileShare.deleteDirectory(configuration, directoryPath);
-  //     ipcEvent.sender.send(InvokeEvent.TryFetch, "");
-  //   } catch (error: any) {
-  //     ipcEvent.sender.send(
-  //       InvokeEvent.FileProcessingMessage,
-  //       Status.Error,
-  //       error?.details?.message ||
-  //         "An error occurred while deleting the directory"
-  //     );
-  //   }
-  // };
-  // uploadHandler = async (
-  //   ipcEvent: Electron.IpcMainInvokeEvent,
-  //   configuration: any,
-  //   directories: string
-  // ) => {
-  //   try {
-  //     let filePaths = await dialog.showOpenDialog({
-  //       properties: ["openFile"],
-  //       filters: [
-  //         {
-  //           name: "Extension",
-  //           extensions: supportedExtensions,
-  //         },
-  //       ],
-  //     });
-  //     if (filePaths.canceled) {
-  //       return "canceled";
-  //     }
-  //     configuration = JSON.parse(configuration);
-  //     let selectedPath = filePaths.filePaths[0];
+      configuration = JSON.parse(configuration);
+      await this.fileShare.deleteFile(configuration, folderName, fileName);
+      ipcEvent.sender.send(InvokeEvent.TryFetch, "");
+    } catch (error: any) {
+      ipcEvent.sender.send(
+        InvokeEvent.FileProcessingMessage,
+        Status.Error,
+        error?.details?.message ||
+          error.message ||
+          "An error occurred while deleting the file"
+      );
+    }
+  };
+  createDirectoryHandler = async (
+    ipcEvent: Electron.IpcMainInvokeEvent,
+    configuration: any,
+    currentDirectoryPath: string,
+    directoryName: string
+  ) => {
+    try {
+      configuration = JSON.parse(configuration);
+      await this.fileShare.addDirectory(
+        configuration,
+        currentDirectoryPath,
+        directoryName
+      );
+      ipcEvent.sender.send(InvokeEvent.TryFetch, "");
+      ipcEvent.sender.send(InvokeEvent.CreatedState, directoryName);
+      ipcEvent.sender.send(
+        InvokeEvent.FileProcessingMessage,
+        Status.Success,
+        `The directory ${directoryName} is created successfully`
+      );
+    } catch (error: any) {
+      ipcEvent.sender.send(
+        InvokeEvent.FileProcessingMessage,
+        Status.Error,
+        error?.details?.message ||
+          "An error occurred while creating the directory"
+      );
+    }
+  };
+  deleteDirectoryHandler = async (
+    ipcEvent: Electron.IpcMainInvokeEvent,
+    configuration: any,
+    directoryPath: string
+  ) => {
+    try {
+      configuration = JSON.parse(configuration);
+      await this.fileShare.deleteDirectory(configuration, directoryPath);
+      ipcEvent.sender.send(InvokeEvent.TryFetch, "");
+    } catch (error: any) {
+      ipcEvent.sender.send(
+        InvokeEvent.FileProcessingMessage,
+        Status.Error,
+        error?.details?.message ||
+          "An error occurred while deleting the directory"
+      );
+    }
+  };
+  uploadHandler = async (
+    ipcEvent: Electron.IpcMainInvokeEvent,
+    configuration: any,
+    directories: string
+  ) => {
+    try {
+      let filePaths = await dialog.showOpenDialog({
+        properties: ["openFile"],
+        filters: [
+          {
+            name: "Extension",
+            extensions: supportedExtensions,
+          },
+        ],
+      });
+      if (filePaths.canceled) {
+        return "canceled";
+      }
+      configuration = JSON.parse(configuration);
+      let selectedPath = filePaths.filePaths[0];
 
-  //     this.loadingHandler(ipcEvent, true);
+      this.loadingHandler(ipcEvent, true);
 
-  //     let isAlreadyExists = await this.fileShare.checkFileExists(
-  //       this.withEncryption
-  //         ? path.basename(selectedPath) + ".txt.gz"
-  //         : path.basename(selectedPath),
-  //       configuration,
-  //       directories
-  //     );
-  //     if (isAlreadyExists) {
-  //       throw new Error(
-  //         `The file ${path.basename(
-  //           selectedPath
-  //         )} already exists in the directory`
-  //       );
-  //     }
+      let isAlreadyExists = await this.fileShare.checkFileExists(
+        path.basename(selectedPath),
+        configuration,
+        directories
+      );
+      if (isAlreadyExists) {
+        throw new Error(
+          `The file ${path.basename(
+            selectedPath
+          )} already exists in the directory`
+        );
+      }
 
-  //     if (this.withEncryption) {
-  //       let toPath = this.fileShare.getSharedStoragePath(
-  //         configuration.tempPath,
-  //         directories,
-  //         path.basename(selectedPath) + ".txt"
-  //       );
+      await this.fileShare.uploadFile(
+        path.basename(selectedPath),
+        selectedPath,
+        configuration,
+        directories
+      );
 
-  //       await this.fileShare.encryptAndSaveFile(
-  //         selectedPath,
-  //         toPath,
-  //         configuration.privateKey
-  //       );
+      ipcEvent.sender.send(
+        InvokeEvent.CreatedState,
+        path.basename(selectedPath)
+      );
 
-  //       let uploadFilePath = path.basename(selectedPath) + ".txt.gz";
-  //       await this.fileShare.uploadFile(
-  //         uploadFilePath,
-  //         toPath,
-  //         configuration,
-  //         directories
-  //       );
-  //       this.fileShare.removeFileFromTempPath(toPath);
-
-  //       ipcEvent.sender.send(InvokeEvent.CreatedState, uploadFilePath);
-  //     } else {
-  //       await this.fileShare.uploadFile(
-  //         path.basename(selectedPath),
-  //         selectedPath,
-  //         configuration,
-  //         directories
-  //       );
-
-  //       ipcEvent.sender.send(
-  //         InvokeEvent.CreatedState,
-  //         path.basename(selectedPath)
-  //       );
-  //     }
-
-  //     this.loadingHandler(ipcEvent, false);
-  //     ipcEvent.sender.send(InvokeEvent.TryFetch, "");
-  //     ipcEvent.sender.send(
-  //       InvokeEvent.FileProcessingMessage,
-  //       Status.Success,
-  //       `The file ${path.basename(selectedPath)} is uploaded successfully`
-  //     );
-  //   } catch (error: any) {
-  //     this.loadingHandler(ipcEvent, false);
-  //     ipcEvent.sender.send(
-  //       InvokeEvent.FileProcessingMessage,
-  //       Status.Error,
-  //       error?.details?.message ||
-  //         error.message ||
-  //         "An error occurred while uploading the file"
-  //     );
-  //   }
-  // };
+      this.loadingHandler(ipcEvent, false);
+      ipcEvent.sender.send(InvokeEvent.TryFetch, "");
+      ipcEvent.sender.send(
+        InvokeEvent.FileProcessingMessage,
+        Status.Success,
+        `The file ${path.basename(selectedPath)} is uploaded successfully`
+      );
+    } catch (error: any) {
+      this.loadingHandler(ipcEvent, false);
+      ipcEvent.sender.send(
+        InvokeEvent.FileProcessingMessage,
+        Status.Error,
+        error?.details?.message ||
+          error.message ||
+          "An error occurred while uploading the file"
+      );
+    }
+  };
   getFilesHandler = async (
     ipcEvent: Electron.IpcMainInvokeEvent,
     configuration: any,
@@ -201,6 +174,7 @@ export class FileInvocationHandler {
         folderName,
         prefix
       );
+      console.log(res, currentDirectory);
       ipcEvent.sender.send(InvokeEvent.SetCurrentDirectory, currentDirectory);
       ipcEvent.sender.send(InvokeEvent.GetFileResponse, res);
     } catch (error: any) {
@@ -212,173 +186,177 @@ export class FileInvocationHandler {
     }
   };
 
-  // openFileInvocation = async (
-  //   ipcEvent: Electron.IpcMainInvokeEvent,
-  //   file: File,
-  //   configuration: any,
-  //   directories: string
-  // ) => {
-  //   let downloadedLocation: string = "",
-  //     viewPath: string = "",
-  //     directoryParts = directories.split("/"),
-  //     isUploading = false;
+  openFileInvocation = async (
+    ipcEvent: Electron.IpcMainInvokeEvent,
+    file: File,
+    configuration: any,
+    directories: string
+  ) => {
+    let downloadedLocation: string = "",
+      viewPath: string = "",
+      directoryParts = directories.split("/"),
+      isUploading = false;
 
-  //   const modifyFoldersMap = (directoryParts: string[], value: number) => {
-  //     for (let i = 0; i < directoryParts.length; i++) {
-  //       let currentPath = directoryParts.slice(0, i + 1).join("/");
-  //       this.openFoldersMap.set(
-  //         currentPath,
-  //         (this.openFoldersMap.get(currentPath) ?? 0) + value
-  //       );
-  //     }
-  //   };
+    const modifyFoldersMap = (directoryParts: string[], value: number) => {
+      for (let i = 0; i < directoryParts.length; i++) {
+        let currentPath = directoryParts.slice(0, i + 1).join("/");
+        this.openFoldersMap.set(
+          currentPath,
+          (this.openFoldersMap.get(currentPath) ?? 0) + value
+        );
+      }
+    };
 
-  //   try {
-  //     this.loadingHandler(ipcEvent, true);
-  //     configuration = JSON.parse(configuration);
+    try {
+      this.loadingHandler(ipcEvent, true);
+      configuration = JSON.parse(configuration);
 
-  //     if (
-  //       !file.name.endsWith(".txt") &&
-  //       !this.withEncryption &&
-  //       file.name.endsWith(".gz")
-  //     ) {
-  //       throw new Error(`The file ${file.name} is not supported for opening`);
-  //     }
+      // if (
+      //   !file.name.endsWith(".txt") &&
+      //   !this.withEncryption &&
+      //   file.name.endsWith(".gz")
+      // ) {
+      //   throw new Error(`The file ${file.name} is not supported for opening`);
+      // }
 
-  //     viewPath = this.fileShare.getSharedStoragePath(
-  //       configuration.tempPath,
-  //       directories,
-  //       this.withEncryption ? file.name.split(".txt")[0] : file.name
-  //     );
+      // viewPath = this.fileShare.getSharedStoragePath(
+      //   configuration.tempPath,
+      //   directories,
+      //   this.withEncryption ? file.name.split(".txt")[0] : file.name
+      // );
 
-  //     if (this.openFilesMap.has(directories + "/" + file.name)) {
-  //       ipcEvent.sender.send(
-  //         InvokeEvent.FileProcessingMessage,
-  //         Status.Error,
-  //         `The file ${path.basename(viewPath)} is already opened`
-  //       );
-  //       this.loadingHandler(ipcEvent, false);
-  //       return;
-  //     }
+      console.log(directories);
 
-  //     this.openFilesMap.set(directories + "/" + file.name, "Opening");
-  //     modifyFoldersMap(directoryParts, 1);
+      viewPath = path.join("Z:", directories, file.name); // have to
 
-  //     let metadata = await this.fileShare.getMetadata(
-  //       file,
-  //       configuration,
-  //       directories
-  //     );
-  //     let isNewFormat = Boolean(metadata?.stream) ?? false;
-  //     downloadedLocation = path.join(
-  //       path.dirname(viewPath),
-  //       file.name.replace(".gz", "")
-  //     );
+      // if (this.openFilesMap.has(directories + "/" + file.name)) {
+      //   ipcEvent.sender.send(
+      //     InvokeEvent.FileProcessingMessage,
+      //     Status.Error,
+      //     `The file ${path.basename(viewPath)} is already opened`
+      //   );
+      //   this.loadingHandler(ipcEvent, false);
+      //   return;
+      // }
 
-  //     await this.fileShare.downloadFile(
-  //       file,
-  //       configuration,
-  //       directories,
-  //       viewPath
-  //     );
+      this.openFilesMap.set(directories + "/" + file.name, "Opening");
+      modifyFoldersMap(directoryParts, 1);
 
-  //     if (this.withEncryption) {
-  //       let key = configuration.privateKey;
-  //       await this.fileShare
-  //         .decryptAndSaveFile(downloadedLocation, viewPath, key, isNewFormat)
-  //         .catch((_error) => {
-  //           throw new Error(
-  //             `The file ${path.basename(viewPath)} is not in the correct format`
-  //           );
-  //         });
-  //       this.fileShare.removeFileFromTempPath(downloadedLocation);
-  //     }
+      // let metadata = await this.fileShare.getMetadata(
+      //   file,
+      //   configuration,
+      //   directories
+      // );
+      // let isNewFormat = Boolean(metadata?.stream) ?? false;
+      // downloadedLocation = path.join(
+      //   path.dirname(viewPath),
+      //   file.name.replace(".gz", "")
+      // );
 
-  //     await this.fileShare.openFile(viewPath);
-  //     this.loadingHandler(ipcEvent, false);
-  //     const actualExt = file.name.split(".")[1].toLowerCase();
-  //     let isEditable = editableExtensions.includes(actualExt);
-  //     let paths = [viewPath];
+      // await this.fileShare.downloadFile(
+      //   file,
+      //   configuration,
+      //   directories,
+      //   viewPath
+      // );
 
-  //     /** ------------------------- Watch for File Changes & Sync ------------------------ */
+      // if (this.withEncryption) {
+      //   let key = configuration.privateKey;
+      //   await this.fileShare
+      //     .decryptAndSaveFile(downloadedLocation, viewPath, key, isNewFormat)
+      //     .catch((_error) => {
+      //       throw new Error(
+      //         `The file ${path.basename(viewPath)} is not in the correct format`
+      //       );
+      //     });
+      //   this.fileShare.removeFileFromTempPath(downloadedLocation);
+      // }
 
-  //     const watcher = chokidar
-  //       .watch(viewPath, {
-  //         persistent: true,
-  //         ignoreInitial: true,
-  //         awaitWriteFinish: {
-  //           stabilityThreshold: 2000,
-  //           pollInterval: 100,
-  //         },
-  //       })
-  //       .on("change", async () => {
-  //         console.log(`File ${viewPath} changed. Uploading...`);
-  //         if (isEditable || !isNewFormat) {
-  //           if (!isNewFormat) {
-  //             ipcEvent.sender.send(
-  //               InvokeEvent.FileProcessingMessage,
-  //               Status.Info,
-  //               "The file is not in the new format. We are converting it to the new format.",
-  //               true
-  //             );
-  //           }
+      await this.fileShare.openFile(viewPath);
+      this.loadingHandler(ipcEvent, false);
+      const actualExt = file.name.split(".")[1].toLowerCase();
+      let isEditable = editableExtensions.includes(actualExt);
+      let paths = [viewPath];
 
-  //           // Set upload state
-  //           isUploading = true;
-  //           await this.saveAndUpload(
-  //             ipcEvent,
-  //             file,
-  //             viewPath,
-  //             configuration,
-  //             directories
-  //           );
-  //           isUploading = false;
-  //         }
-  //       });
+      /** ------------------------- Watch for File Changes & Sync ------------------------ */
 
-  //     /** ------------------------- Monitor File Closing & Cleanup ------------------------ */
+      // const watcher = chokidar
+      //   .watch(viewPath, {
+      //     persistent: true,
+      //     ignoreInitial: true,
+      //     awaitWriteFinish: {
+      //       stabilityThreshold: 2000,
+      //       pollInterval: 100,
+      //     },
+      //   })
+      //   .on("change", async () => {
+      //     console.log(`File ${viewPath} changed. Uploading...`);
+      //     if (isEditable || !isNewFormat) {
+      //       if (!isNewFormat) {
+      //         ipcEvent.sender.send(
+      //           InvokeEvent.FileProcessingMessage,
+      //           Status.Info,
+      //           "The file is not in the new format. We are converting it to the new format.",
+      //           true
+      //         );
+      //       }
 
-  //     const intervalId = setInterval(async () => {
-  //       let isFileOpen = await this.fileShare
-  //         .isFileOpened(paths)
-  //         .catch(() => false);
+      //       // Set upload state
+      //       isUploading = true;
+      //       await this.saveAndUpload(
+      //         ipcEvent,
+      //         file,
+      //         viewPath,
+      //         configuration,
+      //         directories
+      //       );
+      //       isUploading = false;
+      //     }
+      //   });
 
-  //       if (!isFileOpen) {
-  //         if (isUploading) {
-  //           console.log(
-  //             `File ${viewPath} closed, but upload is in progress. Waiting...`
-  //           );
-  //           return; // Skip cleanup if still uploading
-  //         }
+      /** ------------------------- Monitor File Closing & Cleanup ------------------------ */
 
-  //         clearInterval(intervalId);
-  //         watcher.close();
-  //         console.log(`File ${viewPath} closed. Cleaning up...`);
+      // const intervalId = setInterval(async () => {
+      //   let isFileOpen = await this.fileShare
+      //     .isFileOpened(paths)
+      //     .catch(() => false);
 
-  //         this.fileShare.removeFileFromTempPath(viewPath);
-  //         ipcEvent.sender.send(InvokeEvent.TryFetch, "");
-  //         this.loadingHandler(ipcEvent, false);
-  //         this.openFilesMap.delete(directories + "/" + file.name);
-  //         modifyFoldersMap(directoryParts, -1);
-  //       }
-  //     }, 5000);
-  //   } catch (error: any) {
-  //     console.error("Error:", error);
-  //     this.loadingHandler(ipcEvent, false);
-  //     ipcEvent.sender.send(
-  //       InvokeEvent.FileProcessingMessage,
-  //       Status.Error,
-  //       error?.details?.message ||
-  //         error.message ||
-  //         "An error occurred while opening the file"
-  //     );
-  //     this.openFilesMap.delete(directories + "/" + file.name);
-  //     modifyFoldersMap(directoryParts, -1);
-  //     downloadedLocation &&
-  //       this.fileShare.removeFileFromTempPath(downloadedLocation);
-  //     viewPath && this.fileShare.removeFileFromTempPath(viewPath);
-  //   }
-  // };
+      //   if (!isFileOpen) {
+      //     if (isUploading) {
+      //       console.log(
+      //         `File ${viewPath} closed, but upload is in progress. Waiting...`
+      //       );
+      //       return; // Skip cleanup if still uploading
+      //     }
+
+      //     clearInterval(intervalId);
+      //     watcher.close();
+      //     console.log(`File ${viewPath} closed. Cleaning up...`);
+
+      //     this.fileShare.removeFileFromTempPath(viewPath);
+      //     ipcEvent.sender.send(InvokeEvent.TryFetch, "");
+      //     this.loadingHandler(ipcEvent, false);
+      //     this.openFilesMap.delete(directories + "/" + file.name);
+      //     modifyFoldersMap(directoryParts, -1);
+      //   }
+      // }, 5000);
+    } catch (error: any) {
+      console.error("Error:", error);
+      this.loadingHandler(ipcEvent, false);
+      ipcEvent.sender.send(
+        InvokeEvent.FileProcessingMessage,
+        Status.Error,
+        error?.details?.message ||
+          error.message ||
+          "An error occurred while opening the file"
+      );
+      this.openFilesMap.delete(directories + "/" + file.name);
+      modifyFoldersMap(directoryParts, -1);
+      // downloadedLocation &&
+      //   this.fileShare.removeFileFromTempPath(downloadedLocation);
+      // viewPath && this.fileShare.removeFileFromTempPath(viewPath);
+    }
+  };
   loadingHandler = (
     ipcEvent: Electron.IpcMainInvokeEvent,
     loading: boolean
@@ -505,12 +483,12 @@ export function fileInvocation(win: Electron.BrowserWindow) {
     FileInvocationHandler.getInstance();
 
   const handlerRecord: Record<string, any> = {
-    // [InvokeEvent.DeleteFile]: fileInvocationHandler.deleteFileHandler,
-    // [InvokeEvent.CreateDirectory]: fileInvocationHandler.createDirectoryHandler,
-    // [InvokeEvent.DeleteDirectory]: fileInvocationHandler.deleteDirectoryHandler,
-    // [InvokeEvent.UploadFromPC]: fileInvocationHandler.uploadHandler,
+    [InvokeEvent.DeleteFile]: fileInvocationHandler.deleteFileHandler,
+    [InvokeEvent.CreateDirectory]: fileInvocationHandler.createDirectoryHandler,
+    [InvokeEvent.DeleteDirectory]: fileInvocationHandler.deleteDirectoryHandler,
+    [InvokeEvent.UploadFromPC]: fileInvocationHandler.uploadHandler,
     [InvokeEvent.GetFiles]: fileInvocationHandler.getFilesHandler,
-    // [InvokeEvent.OpenFile]: fileInvocationHandler.openFileInvocation,
+    [InvokeEvent.OpenFile]: fileInvocationHandler.openFileInvocation,
     [InvokeEvent.Loading]: fileInvocationHandler.loadingHandler,
     [InvokeEvent.GetDirectoryTree]:
       fileInvocationHandler.getDirectoryTreeHandler,

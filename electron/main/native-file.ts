@@ -59,35 +59,56 @@ export class NativeFile {
     prefix?: string
   ) => {
     try {
-      this.mountFileShare(configuration);
-      const directoryPath = path.resolve(directoryName);
+      await this.mountFileShare(configuration);
+
+      let directoryPath = path.resolve(directoryName);
+      if (os.platform() === "win32") {
+        directoryPath = path.join("Z:", directoryName);
+      }
+
       const dirEntries = await fs.promises.readdir(directoryPath, {
         withFileTypes: true,
       });
 
-      const fileList = dirEntries
-        .filter(
-          (entry) =>
-            entry.isFile() && (!prefix || entry.name.startsWith(prefix))
-        )
-        .map((entry) => entry.name);
+      const fileList = await Promise.all(
+        dirEntries
+          .filter((entry) => !prefix || entry.name.startsWith(prefix)) // Filter based on prefix
+          .map(async (entry) => {
+            const fullPath = path.join(directoryPath, entry.name);
+            const stats = await fs.promises.stat(fullPath);
 
-      const directoryStats = await fs.promises.stat(directoryPath);
-      const directoryId = directoryStats.ino.toString();
+            return {
+              kind: entry.isDirectory() ? "directory" : "file",
+              name: entry.name,
+              fileId: stats.ino.toString(),
+              properties: {
+                contentLength: entry.isFile() ? stats.size : undefined,
+                creationTime: stats.birthtime,
+                lastAccessTime: stats.atime,
+                lastWriteTime: stats.mtime,
+                changeTime: stats.ctime,
+                lastModified: stats.mtime,
+                etag: undefined, // Local files don’t have an etag
+              },
+              attributes: undefined,
+              permissionKey: undefined,
+            };
+          })
+      );
 
-      return [fileList, directoryId];
+      return [fileList, ""];
     } catch (error) {
       console.error(
         `Error listing files in directory: ${directoryName}`,
         error
       );
-      return [[], null];
+      return [[], ""];
     }
   };
 
   getDirectoryTree = async (folderPath: string): Promise<DirectoryItem[]> => {
     let level = 0;
-
+    folderPath = path.join("Z:", folderPath);
     const fetchDirectoryContents = async (
       directoryPath: string,
       currentLevel: number
@@ -144,7 +165,23 @@ export class NativeFile {
     currentDirectoryPath: string,
     newDirectoryName: string
   ) => {
-    await fs.promises.rename(currentDirectoryPath, newDirectoryName);
+    try {
+      let basePath =
+        os.platform() === "win32" ? "Z:" : path.join(__dirname, "mnt");
+
+      const oldPath = path.join(basePath, currentDirectoryPath);
+      const newPath = path.join(
+        basePath,
+        path.dirname(currentDirectoryPath),
+        newDirectoryName
+      );
+
+      await fs.promises.rename(oldPath, newPath);
+
+      console.log(`Folder renamed: ${oldPath} → ${newPath}`);
+    } catch (error) {
+      console.error("Error renaming folder:", error);
+    }
   };
 
   renameFile = async (
@@ -152,28 +189,109 @@ export class NativeFile {
     currentFileName: string,
     newFileName: string
   ) => {
-    await fs.promises.rename(
-      path.join(path.dirname(currentFilePath), currentFileName),
-      path.join(path.dirname(currentFilePath), newFileName)
-    );
+    try {
+      let basePath =
+        os.platform() === "win32" ? "Z:" : path.join(__dirname, "mnt");
+
+      const oldPath = path.join(basePath, currentFilePath, currentFileName);
+      const newPath = path.join(basePath, currentFilePath, newFileName);
+
+      await fs.promises.rename(oldPath, newPath);
+
+      console.log(`File renamed: ${oldPath} → ${newPath}`);
+    } catch (error) {
+      console.error("Error renaming file:", error);
+    }
   };
 
   uploadFile = async (
     fileName: string,
     filePath: string,
-    destinationPath: string
+    configuration: Configuration,
+    directoryName: string
   ) => {
-    const destinationFilePath = path.join(
-      destinationPath,
-      path.basename(filePath)
-    );
+    try {
+      await this.mountFileShare(configuration);
 
-    await fs.promises.copyFile(filePath, destinationFilePath).catch((err) => {
-      console.error("Error uploading file:", err);
-    });
+      let destinationPath = path.resolve(directoryName, fileName);
+      if (os.platform() === "win32") {
+        destinationPath = path.join("Z:", directoryName, fileName);
+      }
+
+      await fs.promises.copyFile(filePath, destinationPath);
+
+      console.log(`File uploaded: ${filePath} → ${destinationPath}`);
+    } catch (error) {
+      console.error(`Error uploading file: ${fileName}`, error);
+    }
   };
 
-  checkFileExists = async (fileName: string, directoryName: string) => {
+  addDirectory = async (
+    configuration: Configuration,
+    currentDirectoryPath: string,
+    directoryName: string
+  ) => {
+    try {
+      let directoryPath = path.resolve(currentDirectoryPath, directoryName);
+      if (os.platform() === "win32") {
+        directoryPath = path.join("Z:", currentDirectoryPath, directoryName);
+      }
+
+      await fs.promises.mkdir(directoryPath, { recursive: true });
+      console.log(`Directory created: ${directoryPath}`);
+    } catch (error) {
+      console.error(`Error creating directory: ${directoryName}`, error);
+    }
+  };
+
+  deleteDirectory = async (
+    configuration: Configuration,
+    directoryPath: string
+  ) => {
+    try {
+      let resolvedPath = path.resolve(directoryPath);
+      if (os.platform() === "win32") {
+        resolvedPath = path.join("Z:", directoryPath);
+      }
+
+      await fs.promises.rm(resolvedPath, { recursive: true, force: true });
+
+      console.log(`Directory deleted: ${resolvedPath}`);
+    } catch (error) {
+      console.error(`Error deleting directory: ${directoryPath}`, error);
+    }
+  };
+
+  deleteFile = async (
+    configuration: Configuration,
+    directoryName: string,
+    fileName: string
+  ) => {
+    try {
+      await this.mountFileShare(configuration);
+
+      let filePath = path.resolve(directoryName, fileName);
+      if (os.platform() === "win32") {
+        filePath = path.join("Z:", directoryName, fileName);
+      }
+
+      await fs.promises.unlink(filePath);
+
+      console.log(`File deleted: ${filePath}`);
+    } catch (error: any) {
+      if (error.code === "ENOENT") {
+        console.error(`File not found: ${fileName}`);
+      } else {
+        console.error(`Error deleting file: ${fileName}`, error);
+      }
+    }
+  };
+
+  checkFileExists = async (
+    fileName: string,
+    configuration: Configuration,
+    directoryName: string
+  ) => {
     return fs.existsSync(path.join(directoryName, fileName));
   };
 
