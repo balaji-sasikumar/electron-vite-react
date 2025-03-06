@@ -211,8 +211,6 @@ export class NativeFile {
     directoryName: string
   ) => {
     try {
-      await this.mountFileShare(configuration);
-
       let destinationPath = path.resolve(directoryName, fileName);
       if (os.platform() === "win32") {
         destinationPath = path.join("Z:", directoryName, fileName);
@@ -268,8 +266,6 @@ export class NativeFile {
     fileName: string
   ) => {
     try {
-      await this.mountFileShare(configuration);
-
       let filePath = path.resolve(directoryName, fileName);
       if (os.platform() === "win32") {
         filePath = path.join("Z:", directoryName, fileName);
