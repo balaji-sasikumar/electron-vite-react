@@ -17,10 +17,9 @@ export class NativeFile {
   private constructor() {}
 
   openFile = async (newPath: string) => {
-    await shell.openPath(newPath).catch((err) => {
-      if (os.platform() === "win32") {
-        path.join("Z:", newPath);
-      }
+    let openFilePath =
+      os.platform() === "win32" ? path.join("Z:", newPath) : newPath;
+    await shell.openPath(openFilePath).catch((err) => {
       console.error("Error opening file:", err);
     });
   };
