@@ -5,7 +5,9 @@ import { exec } from "child_process";
 import { shell } from "electron";
 import { Configuration } from "electron/interfaces/configuration.interface";
 import { tempFolder } from "./utils";
+import { promisify } from "util";
 
+const execPromise = promisify(exec);
 interface DirectoryItem {
   label: string;
   id: string;
@@ -24,7 +26,7 @@ export class NativeFile {
     });
   };
 
-  mountFileShare = async (configuration: Configuration) => {
+  mountFileShare = async (configuration: Configuration): Promise<void> => {
     const { accountName, accountKey, shareName } = configuration;
     const platform = os.platform();
 
@@ -39,19 +41,17 @@ export class NativeFile {
     } else if (platform === "win32") {
       command = `net use Z: \\\\${accountName}.file.core.windows.net\\${shareName} ${accountKey} /USER:${accountName}`;
     } else {
-      console.error("Unsupported OS for mounting Azure File Share");
-      return;
+      throw new Error("Unsupported OS for mounting Azure File Share");
     }
 
-    // Execute the mount command
-    exec(command, (error, stdout, stderr) => {
-      if (error) {
-        console.error(`Mount error: ${error.message}`);
-        return;
-      }
+    try {
+      const { stdout, stderr } = await execPromise(command);
       console.log(`Mount output: ${stdout}`);
       if (stderr) console.error(`Mount stderr: ${stderr}`);
-    });
+    } catch (error: any) {
+      console.error(`Mount error: ${error.message}`);
+      throw error;
+    }
   };
 
   listFiles = async (
@@ -60,7 +60,14 @@ export class NativeFile {
     prefix?: string
   ) => {
     try {
-      await this.mountFileShare(configuration);
+      try {
+        await this.mountFileShare(configuration);
+      } catch (error: any) {
+        // Ignore "already mounted" errors and continue execution
+        if (!error.message.includes("already mounted")) {
+          console.warn("Mount error (ignored):", error.message);
+        }
+      }
 
       let directoryPath = path.resolve(directoryName);
       if (os.platform() === "win32") {
