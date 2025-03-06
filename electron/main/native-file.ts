@@ -2,7 +2,6 @@ import * as fs from "fs";
 import * as path from "path";
 import * as os from "os";
 import { exec } from "child_process";
-import mime from "mime";
 import { shell } from "electron";
 import { Configuration } from "electron/interfaces/configuration.interface";
 import { tempFolder } from "./utils";
@@ -19,6 +18,9 @@ export class NativeFile {
 
   openFile = async (newPath: string) => {
     await shell.openPath(newPath).catch((err) => {
+      if (os.platform() === "win32") {
+        path.join("Z:", newPath);
+      }
       console.error("Error opening file:", err);
     });
   };
@@ -88,7 +90,6 @@ export class NativeFile {
                 lastWriteTime: stats.mtime,
                 changeTime: stats.ctime,
                 lastModified: stats.mtime,
-                etag: undefined, // Local files don’t have an etag
               },
               attributes: undefined,
               permissionKey: undefined,

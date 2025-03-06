@@ -9,11 +9,11 @@ import {
 import { release } from "node:os";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { fileInvocation } from "./file-invocation";
 import { exec } from "child_process";
 import { logError } from "./logger";
 import * as fs from "fs";
 import * as path from "path";
+import { nativeFileInvocation } from "./native-file-invocation";
 
 globalThis.__filename = fileURLToPath(import.meta.url);
 globalThis.__dirname = dirname(__filename);
@@ -127,7 +127,8 @@ async function createWindow() {
     win?.webContents.send("app-state-changed", "focus");
   });
 
-  fileInvocation(win);
+  // fileInvocation(win);
+  nativeFileInvocation(win);
 }
 
 app.whenReady().then(createWindow);
