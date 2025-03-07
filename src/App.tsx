@@ -63,10 +63,6 @@ function App() {
 
     window.addEventListener("offline", handleOffline);
     window.addEventListener("online", handleOnline);
-    let tempPath = JSON.parse(
-      localStorage.getItem("configuration") || "{}"
-    ).tempPath;
-    window.ipcRenderer.invoke(InvokeEvent.SendTempPath, tempPath);
     const fetchData = async () => {
       if (!navigator.onLine) {
         handleOffline();
