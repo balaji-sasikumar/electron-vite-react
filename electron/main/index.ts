@@ -79,46 +79,46 @@ async function createWindow() {
     if (url.startsWith("https:")) shell.openExternal(url);
     return { action: "deny" };
   });
-  ipcMain.handle("send-temp-path", (_, arg) => {
-    console.log(`Received temp path: ${arg}`);
-    if (arg) tempPath = path.join(arg, "windows-temp");
-  });
+  // ipcMain.handle("send-temp-path", (_, arg) => {
+  //   console.log(`Received temp path: ${arg}`);
+  //   if (arg) tempPath = path.join(arg, "windows-temp");
+  // });
   win.on("close", (e) => {
-    console.log(`Temp path -> On close: ${tempPath}`);
-    const tempDirectoryIsEmpty = tempPath ? isDirectoryEmpty(tempPath) : true;
-    if (!tempDirectoryIsEmpty) {
+    // console.log(`Temp path -> On close: ${tempPath}`);
+    // const tempDirectoryIsEmpty = tempPath ? isDirectoryEmpty(tempPath) : true;
+    // if (!tempDirectoryIsEmpty) {
+    //   e.preventDefault();
+    //   if (!isDialogOpen) {
+    //     isDialogOpen = true;
+    //     win?.setEnabled(false);
+    //     dialog
+    //       .showMessageBox({
+    //         type: "info",
+    //         title: "Files Exist",
+    //         message:
+    //           "There are files present in tempPath. Please Save them before closing the application.",
+    //       })
+    //       .finally(() => {
+    //         isDialogOpen = false;
+    //         win?.setEnabled(true);
+    //         win?.focus();
+    //       });
+    //   }
+    // } else {
+    if (process.platform === "win32") {
       e.preventDefault();
-      if (!isDialogOpen) {
-        isDialogOpen = true;
-        win?.setEnabled(false);
-        dialog
-          .showMessageBox({
-            type: "info",
-            title: "Files Exist",
-            message:
-              "There are files present in tempPath. Please Save them before closing the application.",
-          })
-          .finally(() => {
-            isDialogOpen = false;
-            win?.setEnabled(true);
-            win?.focus();
-          });
-      }
-    } else {
-      if (process.platform === "win32") {
-        e.preventDefault();
-        dialog.showMessageBox({
-          type: "info",
-          title: "Cleanup in Progress",
-          message: "Clearing recent files data. Please wait...",
-        });
-        executeBatchScript();
-        setTimeout(() => {
-          win?.destroy();
-          app.quit();
-        }, 3000);
-      }
+      dialog.showMessageBox({
+        type: "info",
+        title: "Cleanup in Progress",
+        message: "Clearing recent files data. Please wait...",
+      });
+      executeBatchScript();
+      setTimeout(() => {
+        win?.destroy();
+        app.quit();
+      }, 3000);
     }
+    // }
   });
   win.on("blur", () => {
     win?.webContents.send("app-state-changed", "blur");

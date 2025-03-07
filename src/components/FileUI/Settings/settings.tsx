@@ -4,9 +4,6 @@ import Button from "@mui/material/Button";
 import TextField from "@mui/material/TextField";
 import Modal from "@mui/material/Modal";
 import "./settings.css";
-import { IconButton, InputAdornment } from "@mui/material";
-import { InvokeEvent } from "@/enums/invoke-event.enum";
-
 const style = {
   position: "absolute" as "absolute",
   top: "50%",
@@ -33,11 +30,7 @@ const SettingsComponent: React.FC<SettingsComponentProps> = ({
   const [accountName, setAccountName] = useState<string>("");
   const [accountKey, setAccountKey] = useState<string>("");
   const [shareName, setShareName] = useState<string>("");
-  const [privateKey, setPrivateKey] = useState<string>("");
-  const [tempPath, setTempPath] = useState<string>("D:/");
   const [readOnly, setReadOnly] = useState<boolean>(false);
-
-  const [showPrivateKey, setShowPrivateKey] = useState<boolean>(false);
 
   useEffect(() => {
     const configuration = localStorage.getItem("configuration");
@@ -48,16 +41,12 @@ const SettingsComponent: React.FC<SettingsComponentProps> = ({
       setAccountName(config.accountName);
       setAccountKey(config.accountKey);
       setShareName(config.shareName);
-      setPrivateKey(config.privateKey);
-      setTempPath(config.tempPath);
       setReadOnly(true);
     } else {
       setConnectionString("");
       setAccountName("");
       setAccountKey("");
       setShareName("");
-      setPrivateKey("");
-      setTempPath("D:/");
       setReadOnly(false);
     }
   }, [open]);
@@ -66,13 +55,10 @@ const SettingsComponent: React.FC<SettingsComponentProps> = ({
       accountName,
       accountKey,
       shareName,
-      privateKey,
-      tempPath,
     };
     localStorage.setItem("configuration", JSON.stringify(storageData));
     localStorage.setItem("directories", "");
     localStorage.setItem("connectionString", connectionString);
-    window.ipcRenderer.invoke(InvokeEvent.SendTempPath, tempPath);
     onClose && onClose();
     refresh();
   };
@@ -122,65 +108,13 @@ const SettingsComponent: React.FC<SettingsComponentProps> = ({
             }}
             maxRows={4}
           />
-          <TextField
-            id="outlined-basic"
-            label="Enter Private Key"
-            variant="outlined"
-            value={privateKey}
-            onChange={(e) => setPrivateKey(e.target.value)}
-            required
-            disabled={readOnly}
-            type={showPrivateKey ? "text" : "password"}
-            inputProps={{
-              maxLength: 60,
-            }}
-            InputProps={{
-              endAdornment: (
-                <InputAdornment position="end">
-                  <IconButton
-                    onClick={() => setShowPrivateKey(!showPrivateKey)}
-                    onMouseDown={(e: React.MouseEvent<HTMLButtonElement>) =>
-                      e.preventDefault()
-                    }
-                    edge="end"
-                    aria-label="toggle password visibility"
-                  >
-                    {showPrivateKey ? (
-                      <span className="material-symbols-outlined">
-                        visibility
-                      </span>
-                    ) : (
-                      <span className="material-symbols-outlined">
-                        visibility_off
-                      </span>
-                    )}
-                  </IconButton>
-                </InputAdornment>
-              ),
-            }}
-          />
-          <TextField
-            id="outlined-basic"
-            label="Enter Temp Path"
-            variant="outlined"
-            value={tempPath}
-            onChange={(e) => setTempPath(e.target.value)}
-            required
-            disabled={readOnly}
-          />
           <div className="flex flex-row gap-3">
             {!readOnly && (
               <Button
                 variant="contained"
                 className="flex items-center justify-center gap-2 cursor-pointer"
                 onClick={handleSave}
-                disabled={
-                  !accountName ||
-                  !accountKey ||
-                  !shareName ||
-                  !privateKey ||
-                  !tempPath
-                }
+                disabled={!accountName || !accountKey || !shareName}
               >
                 Save
               </Button>
