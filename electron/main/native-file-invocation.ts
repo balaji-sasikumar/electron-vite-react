@@ -135,6 +135,7 @@ export class NativeFileInvocationHandler {
     prefix?: string
   ) => {
     try {
+      configuration = JSON.parse(configuration);
       if (!configuration) {
         ipcEvent.sender.send(InvokeEvent.GetFileResponse, []);
         return;

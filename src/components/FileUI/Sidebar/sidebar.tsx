@@ -72,7 +72,6 @@ const Sidebar: React.FC<Props> = ({ files, openFile, width }) => {
     (async () => {
       await window.ipcRenderer.invoke(
         InvokeEvent.GetDirectoryTree,
-        localStorage.getItem("configuration"),
         directories
       );
     })();
