@@ -6,11 +6,7 @@ import { InvokeEvent } from "../../src/enums/invoke-event.enum";
 import { Status } from "../../src/enums/status.enum";
 import { File } from "electron/interfaces/file.interface";
 import { config } from "../config";
-import { createRequire } from "node:module";
 import { NativeFile } from "./native-file";
-const chokidar = createRequire(import.meta.url)("chokidar");
-
-let onlineStatus: boolean;
 export class NativeFileInvocationHandler {
   fileShare = NativeFile.getInstance();
 
@@ -167,7 +163,6 @@ export class NativeFileInvocationHandler {
         folderName,
         prefix
       );
-      console.log(res, currentDirectory);
       ipcEvent.sender.send(InvokeEvent.SetCurrentDirectory, currentDirectory);
       ipcEvent.sender.send(InvokeEvent.GetFileResponse, res);
     } catch (error: any) {
@@ -289,10 +284,6 @@ export function nativeFileInvocation(win: Electron.BrowserWindow) {
     [InvokeEvent.RenameFolder]: fileInvocationHandler.renameFolderHandler,
     [InvokeEvent.RenameFile]: fileInvocationHandler.renameFileHandler,
   };
-
-  ipcMain.on("online-status", (event, status) => {
-    onlineStatus = status;
-  });
 
   for (const [key, value] of Object.entries(handlerRecord)) {
     ipcMain.handle(key, value);

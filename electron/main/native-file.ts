@@ -73,7 +73,6 @@ export class NativeFile {
       if (os.platform() === "win32") {
         directoryPath = path.join("Z:", directoryName);
       }
-
       const dirEntries = await fs.promises.readdir(directoryPath, {
         withFileTypes: true,
       });
@@ -103,7 +102,7 @@ export class NativeFile {
           })
       );
 
-      return [fileList, ""];
+      return [fileList, directoryPath];
     } catch (error) {
       console.error(
         `Error listing files in directory: ${directoryName}`,
@@ -114,25 +113,29 @@ export class NativeFile {
   };
 
   getDirectoryTree = async (folderPath: string): Promise<DirectoryItem[]> => {
-    let level = 0;
-    folderPath = path.join("Z:", folderPath);
+    const isWindows = os.platform() === "win32";
+    const driveLetter = "Z:";
+    const basePath = isWindows ? driveLetter : "/mnt/azure_share"; // Adjust for Linux/macOS if needed
+
     const fetchDirectoryContents = async (
       directoryPath: string,
-      currentLevel: number
+      level: number
     ): Promise<DirectoryItem[]> => {
       try {
-        const items: DirectoryItem[] = [];
-        const dirEntries = await fs.promises.readdir(directoryPath, {
+        const fullPath = path.resolve(directoryPath); // Ensure absolute path
+        const dirEntries = await fs.promises.readdir(fullPath, {
           withFileTypes: true,
         });
+        const items: DirectoryItem[] = [];
 
         for (const entry of dirEntries) {
           if (entry.isDirectory()) {
+            const dirPath = path.join(fullPath, entry.name);
             items.push({
               label: entry.name,
-              id: path.join(directoryPath, entry.name),
+              id: dirPath, // Use full path as unique ID
               children: [],
-              level: currentLevel,
+              level: level,
             });
           }
         }
@@ -143,22 +146,25 @@ export class NativeFile {
       }
     };
 
-    const paths = folderPath.split(path.sep);
+    const normalizedFolderPath = folderPath
+      .replace(/\\/g, "/")
+      .replace(/^\/+/, "");
+    const paths = normalizedFolderPath.split("/").filter(Boolean);
+    const rootDir = basePath;
     let rootContents: DirectoryItem[] = await fetchDirectoryContents(
-      folderPath,
-      level
+      rootDir,
+      0
     );
     let currentLevel = rootContents;
-    let currentPath = folderPath;
+    let currentPath = rootDir;
 
-    for (const pathSegment of paths) {
+    for (let i = 0; i < paths.length; i++) {
+      const pathSegment = paths[i];
       const parentDir = currentLevel.find((dir) => dir.label === pathSegment);
-      currentPath = path.join(currentPath, pathSegment);
+
       if (parentDir) {
-        parentDir.children = await fetchDirectoryContents(
-          currentPath,
-          level + 1
-        );
+        currentPath = path.join(currentPath, pathSegment);
+        parentDir.children = await fetchDirectoryContents(currentPath, i + 1);
         currentLevel = parentDir.children;
       } else {
         break;
