@@ -21,9 +21,17 @@ export class NativeFile {
   openFile = async (newPath: string) => {
     let openFilePath =
       os.platform() === "win32" ? path.join("Z:", newPath) : newPath;
-    await shell.openPath(openFilePath).catch((err) => {
+
+    try {
+      await fs.promises.access(openFilePath, fs.constants.F_OK);
+      const result = await shell.openPath(openFilePath);
+      if (result) {
+        throw new Error(`Failed to open file: ${result}`);
+      }
+    } catch (err: any) {
       console.error("Error opening file:", err);
-    });
+      throw new Error(`File not found or could not be opened: ${err.message}`);
+    }
   };
 
   mountFileShare = async (configuration: Configuration): Promise<void> => {

@@ -187,7 +187,9 @@ export class NativeFileInvocationHandler {
       configuration = JSON.parse(configuration);
       viewPath = path.join(directories, file.name); // have to
 
-      await this.fileShare.openFile(viewPath);
+      await this.fileShare.openFile(viewPath).catch((err) => {
+        throw new Error(`File opening failed: ${err.message}`);
+      });
       this.loadingHandler(ipcEvent, false);
     } catch (error: any) {
       console.error("Error:", error);
