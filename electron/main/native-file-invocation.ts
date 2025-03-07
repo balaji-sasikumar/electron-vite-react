@@ -5,23 +5,19 @@ import { supportedExtensions } from "./utils";
 import { InvokeEvent } from "../../src/enums/invoke-event.enum";
 import { Status } from "../../src/enums/status.enum";
 import { File } from "electron/interfaces/file.interface";
-import { config } from "../config";
 import { NativeFile } from "./native-file";
 export class NativeFileInvocationHandler {
   fileShare = NativeFile.getInstance();
 
-  withEncryption = config.withEncryption;
   private constructor() {}
 
   deleteFileHandler = async (
     ipcEvent: Electron.IpcMainInvokeEvent,
-    configuration: any,
     folderName: string,
     fileName: string
   ) => {
     try {
-      configuration = JSON.parse(configuration);
-      await this.fileShare.deleteFile(configuration, folderName, fileName);
+      await this.fileShare.deleteFile(folderName, fileName);
       ipcEvent.sender.send(InvokeEvent.TryFetch, "");
     } catch (error: any) {
       ipcEvent.sender.send(
@@ -33,19 +29,14 @@ export class NativeFileInvocationHandler {
       );
     }
   };
+
   createDirectoryHandler = async (
     ipcEvent: Electron.IpcMainInvokeEvent,
-    configuration: any,
     currentDirectoryPath: string,
     directoryName: string
   ) => {
     try {
-      configuration = JSON.parse(configuration);
-      await this.fileShare.addDirectory(
-        configuration,
-        currentDirectoryPath,
-        directoryName
-      );
+      await this.fileShare.addDirectory(currentDirectoryPath, directoryName);
       ipcEvent.sender.send(InvokeEvent.TryFetch, "");
       ipcEvent.sender.send(InvokeEvent.CreatedState, directoryName);
       ipcEvent.sender.send(
@@ -62,14 +53,13 @@ export class NativeFileInvocationHandler {
       );
     }
   };
+
   deleteDirectoryHandler = async (
     ipcEvent: Electron.IpcMainInvokeEvent,
-    configuration: any,
     directoryPath: string
   ) => {
     try {
-      configuration = JSON.parse(configuration);
-      await this.fileShare.deleteDirectory(configuration, directoryPath);
+      await this.fileShare.deleteDirectory(directoryPath);
       ipcEvent.sender.send(InvokeEvent.TryFetch, "");
     } catch (error: any) {
       ipcEvent.sender.send(
@@ -80,32 +70,25 @@ export class NativeFileInvocationHandler {
       );
     }
   };
+
   uploadHandler = async (
     ipcEvent: Electron.IpcMainInvokeEvent,
-    configuration: any,
     directories: string
   ) => {
     try {
       let filePaths = await dialog.showOpenDialog({
         properties: ["openFile"],
-        filters: [
-          {
-            name: "Extension",
-            extensions: supportedExtensions,
-          },
-        ],
+        filters: [{ name: "Extension", extensions: supportedExtensions }],
       });
-      if (filePaths.canceled) {
-        return "canceled";
-      }
-      configuration = JSON.parse(configuration);
+
+      if (filePaths.canceled) return "canceled";
+
       let selectedPath = filePaths.filePaths[0];
 
       this.loadingHandler(ipcEvent, true);
 
       let isAlreadyExists = await this.fileShare.checkFileExists(
         path.basename(selectedPath),
-        configuration,
         directories
       );
       if (isAlreadyExists) {
@@ -119,7 +102,6 @@ export class NativeFileInvocationHandler {
       await this.fileShare.uploadFile(
         path.basename(selectedPath),
         selectedPath,
-        configuration,
         directories
       );
 
@@ -127,7 +109,6 @@ export class NativeFileInvocationHandler {
         InvokeEvent.CreatedState,
         path.basename(selectedPath)
       );
-
       this.loadingHandler(ipcEvent, false);
       ipcEvent.sender.send(InvokeEvent.TryFetch, "");
       ipcEvent.sender.send(
@@ -146,6 +127,7 @@ export class NativeFileInvocationHandler {
       );
     }
   };
+
   getFilesHandler = async (
     ipcEvent: Electron.IpcMainInvokeEvent,
     configuration: any,
@@ -153,7 +135,6 @@ export class NativeFileInvocationHandler {
     prefix?: string
   ) => {
     try {
-      configuration = JSON.parse(configuration);
       if (!configuration) {
         ipcEvent.sender.send(InvokeEvent.GetFileResponse, []);
         return;
@@ -177,22 +158,15 @@ export class NativeFileInvocationHandler {
   openFileInvocation = async (
     ipcEvent: Electron.IpcMainInvokeEvent,
     file: File,
-    configuration: any,
     directories: string
   ) => {
-    let viewPath: string = "";
+    let viewPath = path.join(directories, file.name);
 
     try {
       this.loadingHandler(ipcEvent, true);
-      configuration = JSON.parse(configuration);
-      viewPath = path.join(directories, file.name); // have to
-
-      await this.fileShare.openFile(viewPath).catch((err) => {
-        throw new Error(`File opening failed: ${err.message}`);
-      });
+      await this.fileShare.openFile(viewPath);
       this.loadingHandler(ipcEvent, false);
     } catch (error: any) {
-      console.error("Error:", error);
       this.loadingHandler(ipcEvent, false);
       ipcEvent.sender.send(
         InvokeEvent.FileProcessingMessage,
@@ -203,33 +177,32 @@ export class NativeFileInvocationHandler {
       );
     }
   };
+
   loadingHandler = (
     ipcEvent: Electron.IpcMainInvokeEvent,
     loading: boolean
   ) => {
     ipcEvent.sender.send(InvokeEvent.Loading, loading);
   };
+
   getDirectoryTreeHandler = async (
     ipcEvent: Electron.IpcMainInvokeEvent,
-    configuration: any,
     folderPath: string
   ) => {
     try {
-      configuration = JSON.parse(configuration);
       const res = await this.fileShare.getDirectoryTree(folderPath);
       ipcEvent.sender.send(InvokeEvent.GetDirectoryTreeResponse, res);
-    } catch (error: any) {
+    } catch {
       ipcEvent.sender.send(InvokeEvent.GetDirectoryTreeResponse, []);
     }
   };
+
   renameFolderHandler = async (
     ipcEvent: Electron.IpcMainInvokeEvent,
-    configuration: any,
     folderPath: string,
     newFolderName: string
   ) => {
     try {
-      configuration = JSON.parse(configuration);
       await this.fileShare.renameFolder(folderPath, newFolderName);
       ipcEvent.sender.send(InvokeEvent.TryFetch, "");
     } catch (error: any) {
@@ -242,15 +215,14 @@ export class NativeFileInvocationHandler {
       );
     }
   };
+
   renameFileHandler = async (
     ipcEvent: Electron.IpcMainInvokeEvent,
-    configuration: any,
     folderPath: string,
     fileName: string,
     newFileName: string
   ) => {
     try {
-      configuration = JSON.parse(configuration);
       await this.fileShare.renameFile(folderPath, fileName, newFileName);
       ipcEvent.sender.send(InvokeEvent.TryFetch, "");
     } catch (error: any) {
@@ -270,8 +242,7 @@ export class NativeFileInvocationHandler {
 }
 
 export function nativeFileInvocation(win: Electron.BrowserWindow) {
-  const fileInvocationHandler: NativeFileInvocationHandler =
-    NativeFileInvocationHandler.getInstance();
+  const fileInvocationHandler = NativeFileInvocationHandler.getInstance();
 
   const handlerRecord: Record<string, any> = {
     [InvokeEvent.DeleteFile]: fileInvocationHandler.deleteFileHandler,

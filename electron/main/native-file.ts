@@ -228,7 +228,6 @@ export class NativeFile {
   uploadFile = async (
     fileName: string,
     filePath: string,
-    configuration: Configuration,
     directoryName: string
   ) => {
     try {
@@ -246,7 +245,6 @@ export class NativeFile {
   };
 
   addDirectory = async (
-    configuration: Configuration,
     currentDirectoryPath: string,
     directoryName: string
   ) => {
@@ -263,10 +261,7 @@ export class NativeFile {
     }
   };
 
-  deleteDirectory = async (
-    configuration: Configuration,
-    directoryPath: string
-  ) => {
+  deleteDirectory = async (directoryPath: string) => {
     try {
       let resolvedPath = path.resolve(directoryPath);
       if (os.platform() === "win32") {
@@ -281,11 +276,7 @@ export class NativeFile {
     }
   };
 
-  deleteFile = async (
-    configuration: Configuration,
-    directoryName: string,
-    fileName: string
-  ) => {
+  deleteFile = async (directoryName: string, fileName: string) => {
     try {
       let filePath = path.resolve(directoryName, fileName);
       if (os.platform() === "win32") {
@@ -304,11 +295,7 @@ export class NativeFile {
     }
   };
 
-  checkFileExists = async (
-    fileName: string,
-    configuration: Configuration,
-    directoryName: string
-  ) => {
+  checkFileExists = async (fileName: string, directoryName: string) => {
     return fs.existsSync(path.join(directoryName, fileName));
   };
 

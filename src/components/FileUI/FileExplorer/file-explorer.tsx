@@ -91,13 +91,8 @@ const FileExplorer: React.FC<Props> = ({ files, showSnackBar }) => {
   };
 
   const uploadFile = async () => {
-    const configuration = getConfigurations();
     let directories = localStorage.getItem("directories") || "";
-    await window.ipcRenderer.invoke(
-      InvokeEvent.UploadFromPC,
-      configuration,
-      directories
-    );
+    await window.ipcRenderer.invoke(InvokeEvent.UploadFromPC, directories);
   };
 
   const configureMenuItems = [
@@ -189,7 +184,6 @@ const FileExplorer: React.FC<Props> = ({ files, showSnackBar }) => {
   };
 
   const createFolder = async () => {
-    const configuration = getConfigurations();
     let directories = localStorage.getItem("directories") || "";
     if (folderName.trim() === "") {
       showSnackBar("error", "Folder name cannot be empty");
@@ -197,7 +191,6 @@ const FileExplorer: React.FC<Props> = ({ files, showSnackBar }) => {
     }
     await window.ipcRenderer.invoke(
       InvokeEvent.CreateDirectory,
-      configuration,
       directories,
       folderName
     );
@@ -205,11 +198,9 @@ const FileExplorer: React.FC<Props> = ({ files, showSnackBar }) => {
   };
 
   const renameFolder = async (file: any, newName: string) => {
-    const configuration = getConfigurations();
     let directories = localStorage.getItem("directories") || "";
     await window.ipcRenderer.invoke(
       InvokeEvent.RenameFolder,
-      configuration,
       directories == ""
         ? directories + file.name
         : directories + "/" + file.name,
@@ -218,11 +209,9 @@ const FileExplorer: React.FC<Props> = ({ files, showSnackBar }) => {
   };
 
   const renameFile = async (file: any, newName: string) => {
-    const configuration = getConfigurations();
     let directories = localStorage.getItem("directories") || "";
     await window.ipcRenderer.invoke(
       InvokeEvent.RenameFile,
-      configuration,
       directories,
       file.name,
       directories == "" ? directories + newName : directories + "/" + newName
@@ -230,7 +219,6 @@ const FileExplorer: React.FC<Props> = ({ files, showSnackBar }) => {
   };
 
   const openFile = async (file: File) => {
-    const configuration = getConfigurations();
     let directories = localStorage.getItem("directories") || "";
 
     if (file.kind === "directory") {
@@ -244,12 +232,7 @@ const FileExplorer: React.FC<Props> = ({ files, showSnackBar }) => {
       return;
     }
 
-    await window.ipcRenderer.invoke(
-      InvokeEvent.OpenFile,
-      file,
-      configuration,
-      directories
-    );
+    await window.ipcRenderer.invoke(InvokeEvent.OpenFile, file, directories);
   };
 
   const deleteDialog = async (file: any) => {
@@ -272,7 +255,6 @@ const FileExplorer: React.FC<Props> = ({ files, showSnackBar }) => {
   };
 
   const deleteFile = async (file: any) => {
-    const configuration = getConfigurations();
     let directories = localStorage.getItem("directories") || "";
     let directoryPath = directories;
     if (directoryPath) {
@@ -282,13 +264,11 @@ const FileExplorer: React.FC<Props> = ({ files, showSnackBar }) => {
     if (file.kind === "directory") {
       await window.ipcRenderer.invoke(
         InvokeEvent.DeleteDirectory,
-        configuration,
         directoryPath
       );
     } else {
       await window.ipcRenderer.invoke(
         InvokeEvent.DeleteFile,
-        configuration,
         directories,
         file.name
       );
